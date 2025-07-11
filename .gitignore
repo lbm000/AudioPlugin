@@ -1,0 +1,42 @@
+# Build folders
+cmake-build-*/
+build/
+out/
+
+# Object and binary files
+*.o
+*.a
+*.so
+*.dll
+*.exe
+*.dylib
+
+# CMake generated files
+CMakeFiles/
+CMakeCache.txt
+CTestTestfile.cmake
+cmake_install.cmake
+Makefile
+*.ninja
+*.log
+
+# CLion / JetBrains IDE
+.idea/
+*.iml
+*.iws
+*.ipr
+
+# JUCE artefacts
+Audiovisual_Plugin_artefacts/
+
+# Backup and temp files
+*.swp
+*.bak
+*~
+
+# Ignore these but NOT the JUCE submodule folder itself!
+# extern/JUCE/  <-- NÃO coloque isso no .gitignore!
+
+# If you have user-specific configs, you can ignore them here
+# e.g. local config files, debug files, etc.
+
