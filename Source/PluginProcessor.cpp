@@ -94,11 +94,19 @@ void AnimalBeatAudioProcessor::changeProgramName (int index, const juce::String&
 //==============================================================================
 void AnimalBeatAudioProcessor::prepareToPlay(double sampleRate, int samplesPerBlock)
 {
-    animalSampleCounter = 0;
-    beatSampleCounter = 0;
+    for (int i = 0; i < NUM_ANIMALS; ++i)
+    {
+        animalSampleCounters[i] = 0;
+        if (getSampleRate() > 0.0)
+            animalSamplesPerBeat[i] = static_cast<int>((60.0 / animalBpms[i]) * sampleRate);
+    }
 
-    animalSamplesPerBeat = static_cast<int>((60.0 / animalBpm) * sampleRate);
-    beatSamplesPerBeat   = static_cast<int>((60.0 / beatBpm)   * sampleRate);
+    for (int i = 0; i < NUM_BEATS; ++i)
+    {
+        beatSampleCounters[i] = 0;
+        if (getSampleRate() > 0.0)
+            beatSamplesPerBeat[i] = static_cast<int>((60.0 / beatBpms[i]) * sampleRate);
+    }
 }
 
 
@@ -137,60 +145,77 @@ bool AnimalBeatAudioProcessor::isBusesLayoutSupported (const BusesLayout& layout
 
 void AnimalBeatAudioProcessor::processBlock(juce::AudioBuffer<float>& buffer, juce::MidiBuffer&)
 {
-    // Impede problemas com números de ponto flutuante muito pequenos (subnormals)
     juce::ScopedNoDenormals noDenormals;
-
-    // Quantas amostras (samples) existem neste bloco de áudio atual
     const int bufferNumSamples = buffer.getNumSamples();
-
-    // Quantos canais (por ex: 2 = estéreo) o buffer de saída tem
     const int numChannels = buffer.getNumChannels();
 
-    // Itera por cada amostra individual dentro do bloco
     for (int sample = 0; sample < bufferNumSamples; ++sample)
-	{
-    	// Reiniciar leitura se for momento de "beat" do animal
-    	if (animalSampleCounter % animalSamplesPerBeat == 0 &&
-        	isAnimalFileLoaded && isAnimalPlaying)
-        	animalReadPosition = 0;
-
-    	if (beatSampleCounter % beatSamplesPerBeat == 0 &&
-        	isBeatFileLoaded && isBeatPlaying)
-        	drumReadPosition = 0;
-
-    for (int channel = 0; channel < numChannels; ++channel)
     {
-        float& outSample = buffer.getWritePointer(channel)[sample];
-
-        if (isAnimalFileLoaded && isAnimalPlaying &&
-            animalReadPosition < animalBuffer.getNumSamples())
+        for (int i = 0; i < NUM_ANIMALS; ++i)
         {
-            float inSample = animalBuffer.getReadPointer(channel % animalBuffer.getNumChannels())[animalReadPosition];
-            outSample += inSample;
+            if (animalSampleCounters[i] % animalSamplesPerBeat[i] == 0 &&
+                isAnimalFileLoaded[i] && isAnimalPlaying[i])
+            {
+                animalReadPositions[i] = 0;
+            }
         }
 
-        if (isBeatFileLoaded && isBeatPlaying &&
-            drumReadPosition < beatBuffer.getNumSamples())
+        for (int i = 0; i < NUM_BEATS; ++i)
         {
-            float inSample = beatBuffer.getReadPointer(channel % beatBuffer.getNumChannels())[drumReadPosition];
-            outSample += inSample;
+            if (beatSampleCounters[i] % beatSamplesPerBeat[i] == 0 &&
+                isBeatFileLoaded[i] && isBeatPlaying[i])
+            {
+                beatReadPositions[i] = 0;
+            }
+        }
+
+        for (int channel = 0; channel < numChannels; ++channel)
+        {
+            float& outSample = buffer.getWritePointer(channel)[sample];
+
+            // Animais
+            for (int i = 0; i < NUM_ANIMALS; ++i)
+            {
+                if (isAnimalFileLoaded[i] && isAnimalPlaying[i] &&
+                    animalReadPositions[i] < animalBuffers[i].getNumSamples())
+                {
+                    float inSample = animalBuffers[i].getReadPointer(channel % animalBuffers[i].getNumChannels())[animalReadPositions[i]];
+                    outSample += inSample;
+                }
+            }
+
+            // Beats
+            for (int i = 0; i < NUM_BEATS; ++i)
+            {
+                if (isBeatFileLoaded[i] && isBeatPlaying[i] &&
+                    beatReadPositions[i] < beatBuffers[i].getNumSamples())
+                {
+                    float inSample = beatBuffers[i].getReadPointer(channel % beatBuffers[i].getNumChannels())[beatReadPositions[i]];
+                    outSample += inSample;
+                }
+            }
+        }
+
+        // Avança os ponteiros
+        for (int i = 0; i < NUM_ANIMALS; ++i)
+        {
+            if (isAnimalFileLoaded[i] && isAnimalPlaying[i] &&
+                animalReadPositions[i] < animalBuffers[i].getNumSamples())
+                ++animalReadPositions[i];
+
+            ++animalSampleCounters[i];
+        }
+
+        for (int i = 0; i < NUM_BEATS; ++i)
+        {
+            if (isBeatFileLoaded[i] && isBeatPlaying[i] &&
+                beatReadPositions[i] < beatBuffers[i].getNumSamples())
+                ++beatReadPositions[i];
+
+            ++beatSampleCounters[i];
         }
     }
-
-    if (isAnimalFileLoaded && isAnimalPlaying &&
-        animalReadPosition < animalBuffer.getNumSamples())
-        ++animalReadPosition;
-
-    if (isBeatFileLoaded && isBeatPlaying &&
-        drumReadPosition < beatBuffer.getNumSamples())
-        ++drumReadPosition;
-
-    	++animalSampleCounter;
-    	++beatSampleCounter;
-	}
-
 }
-
 
 
 
@@ -227,64 +252,68 @@ juce::AudioProcessor* JUCE_CALLTYPE createPluginFilter()
     return new AnimalBeatAudioProcessor();
 }
 
-void AnimalBeatAudioProcessor::loadAnimalFile(const juce::File& file)
+void AnimalBeatAudioProcessor::loadAnimalFile(const juce::File& file, int index)
 {
-  	// audio reader
+    if (index < 0 || index >= NUM_ANIMALS)
+        return;
+
     std::unique_ptr<juce::AudioFormatReader> reader(formatManager.createReaderFor(file));
-
-    // reader was created sucessfull ? if yes then go ahead
-    if (reader.get() != nullptr)
+    if (reader)
     {
-      	// create the animal buffer with the necessary number of channels and size
-        animalBuffer.setSize((int) reader->numChannels, (int) reader->lengthInSamples);
-
-        // takes care that i will not receive trash in my buffer
-        animalBuffer.clear();
-
-        // destiny of my audio file is animal buffer
-        reader->read(&animalBuffer, 0, (int) reader->lengthInSamples, 0, true, true);
-        animalReadPosition = 0;
-        isAnimalFileLoaded = true;
+        animalBuffers[index].setSize((int)reader->numChannels, (int)reader->lengthInSamples);
+        animalBuffers[index].clear();
+        reader->read(&animalBuffers[index], 0, (int)reader->lengthInSamples, 0, true, true);
+        animalReadPositions[index] = 0;
+        isAnimalFileLoaded[index] = true;
     }
     else
     {
-        isAnimalFileLoaded = false;
-        DBG("Erro ao carregar arquivo de som animal.");
+        isAnimalFileLoaded[index] = false;
+        DBG("Error loading animal sound into slot " + juce::String(index));
     }
 }
 
-void AnimalBeatAudioProcessor::loadBeatFile(const juce::File& file)
-{
-    std::unique_ptr<juce::AudioFormatReader> reader(formatManager.createReaderFor(file));
 
-    if (reader.get() != nullptr)
+void AnimalBeatAudioProcessor::loadBeatFile(const juce::File& file, int index)
+{
+    if (index < 0 || index >= NUM_BEATS)
+        return;
+
+    std::unique_ptr<juce::AudioFormatReader> reader(formatManager.createReaderFor(file));
+    if (reader)
     {
-        beatBuffer.setSize((int) reader->numChannels, (int) reader->lengthInSamples);
-        beatBuffer.clear();
-        reader->read(&beatBuffer, 0, (int) reader->lengthInSamples, 0, true, true);
-        drumReadPosition = 0;
-        isBeatFileLoaded = true;
+        beatBuffers[index].setSize((int)reader->numChannels, (int)reader->lengthInSamples);
+        beatBuffers[index].clear();
+        reader->read(&beatBuffers[index], 0, (int)reader->lengthInSamples, 0, true, true);
+        beatReadPositions[index] = 0;
+        isBeatFileLoaded[index] = true;
     }
     else
     {
-        isBeatFileLoaded = false;
-        DBG("Erro ao carregar arquivo de beat.");
+        isBeatFileLoaded[index] = false;
+        DBG("Error loading beat sound into slot " + juce::String(index));
     }
 }
 
-void AnimalBeatAudioProcessor::setAnimalBpm(float newBpm)
-{
-    animalBpm = newBpm;
 
-    if (getSampleRate() > 0.0)
-        animalSamplesPerBeat = static_cast<int>((60.0 / animalBpm) * getSampleRate());
+void AnimalBeatAudioProcessor::setAnimalBpm(int index, float newBpm)
+{
+    if (index >= 0 && index < NUM_ANIMALS)
+    {
+        animalBpms[index] = newBpm;
+        if (getSampleRate() > 0.0)
+            animalSamplesPerBeat[index] = static_cast<int>((60.0 / animalBpms[index]) * getSampleRate());
+    }
 }
 
-void AnimalBeatAudioProcessor::setBeatBpm(float newBpm)
+void AnimalBeatAudioProcessor::setBeatBpm(int index, float newBpm)
 {
-    beatBpm = newBpm;
-
-    if (getSampleRate() > 0.0)
-        beatSamplesPerBeat = static_cast<int>((60.0 / beatBpm) * getSampleRate());
+    if (index >= 0 && index < NUM_BEATS)
+    {
+        beatBpms[index] = newBpm;
+        if (getSampleRate() > 0.0)
+            beatSamplesPerBeat[index] = static_cast<int>((60.0 / beatBpms[index]) * getSampleRate());
+    }
 }
+
 

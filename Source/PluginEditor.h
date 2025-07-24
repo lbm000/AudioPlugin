@@ -33,25 +33,23 @@ private:
     // This reference is provided as a quick way for your editor to
     // access the processor object that created it.
     AnimalBeatAudioProcessor& audioProcessor;
-    juce::TextButton loadAnimalButton;
-    juce::TextButton loadBeatButton;
 
+    static constexpr int NUM_ANIMALS = 4;
+    static constexpr int NUM_BEATS = 2;
 
-    juce::ToggleButton playAnimalToggle { "Play Animal" };
-    juce::ToggleButton playBeatToggle { "Play Beat" };
+    std::array<juce::TextButton, NUM_ANIMALS> loadAnimalButtons;
+    std::array<juce::ToggleButton, NUM_ANIMALS> playAnimalToggles;
+    std::array<juce::Slider, NUM_ANIMALS> animalBpmSliders;
 
-    /*
-        slider to get bpm values, bpm value is like a scale to manage our "music"
-        with this scale we can guarantee that a specifical sound will play at certain interval of time
-     */
-    juce::Slider animalBpmSlider;
-    juce::Slider beatBpmSlider;
+    std::array<juce::TextButton, NUM_BEATS> loadBeatButtons;
+    std::array<juce::ToggleButton, NUM_BEATS> playBeatToggles;
+    std::array<juce::Slider, NUM_BEATS> beatBpmSliders;
 
-    //text for bpm slider
-    juce::Label bpmLabel;
+    std::array<juce::Label, NUM_ANIMALS + NUM_BEATS> bpmLabels;
 
     // Pointer for selection of audio files
     std::unique_ptr<juce::FileChooser> fileChooser;
+
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (AnimalBeatAudioProcessorEditor)
 };

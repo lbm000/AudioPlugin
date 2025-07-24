@@ -13,81 +13,77 @@
 AnimalBeatAudioProcessorEditor::AnimalBeatAudioProcessorEditor (AnimalBeatAudioProcessor& p)
     : AudioProcessorEditor (&p), audioProcessor (p)
 {
-
-    loadAnimalButton.setButtonText("Load Animal Sound");
-    loadAnimalButton.onClick = [this]()
+    for (int i = 0; i < NUM_ANIMALS; ++i)
     {
-        fileChooser = std::make_unique<juce::FileChooser>("Select an animal sound", juce::File{}, "*.wav;*.mp3");
-        fileChooser->launchAsync(juce::FileBrowserComponent::openMode | juce::FileBrowserComponent::canSelectFiles,
-            [this](const juce::FileChooser& fc)
-            {
-                juce::File selectedFile = fc.getResult();
-                audioProcessor.loadAnimalFile(selectedFile);
-            });
-    };
-    addAndMakeVisible(loadAnimalButton);
+        loadAnimalButtons[i].setButtonText("Load Animal " + juce::String(i + 1));
+        loadAnimalButtons[i].onClick = [this, i]()
+        {
+            fileChooser = std::make_unique<juce::FileChooser>("Select animal sound", juce::File{}, "*.wav;*.mp3");
+            fileChooser->launchAsync(juce::FileBrowserComponent::openMode | juce::FileBrowserComponent::canSelectFiles,
+                [this, i](const juce::FileChooser& fc)
+                {
+                    juce::File selectedFile = fc.getResult();
+                    audioProcessor.loadAnimalFile(selectedFile, i);
+                });
+        };
+        addAndMakeVisible(loadAnimalButtons[i]);
 
+        playAnimalToggles[i].setButtonText("Play Animal " + juce::String(i + 1));
+        playAnimalToggles[i].onClick = [this, i]() {
+            audioProcessor.isAnimalPlaying[i] = playAnimalToggles[i].getToggleState();
+        };
+        addAndMakeVisible(playAnimalToggles[i]);
 
-    loadBeatButton.setButtonText("Load Beat");
-    loadBeatButton.onClick = [this]()
+        animalBpmSliders[i].setRange(1, 300, 1);
+        animalBpmSliders[i].setValue(audioProcessor.animalBpms[i]);
+        animalBpmSliders[i].setTextBoxStyle(juce::Slider::TextBoxRight, false, 60, 20);
+        animalBpmSliders[i].onValueChange = [this, i]() {
+            audioProcessor.setAnimalBpm(i, animalBpmSliders[i].getValue());
+        };
+        addAndMakeVisible(animalBpmSliders[i]);
+
+        bpmLabels[i].setText("BPM " + juce::String(i + 1), juce::dontSendNotification);
+        bpmLabels[i].setJustificationType(juce::Justification::centredLeft);
+        addAndMakeVisible(bpmLabels[i]);
+    }
+
+    for (int i = 0; i < NUM_BEATS; ++i)
     {
-        fileChooser = std::make_unique<juce::FileChooser>("Select a beat", juce::File{}, "*.wav;*.mp3;*.aiff;*.flac;*.ogg");
-        fileChooser->launchAsync(juce::FileBrowserComponent::openMode | juce::FileBrowserComponent::canSelectFiles,
-            [this](const juce::FileChooser& fc)
-            {
-                juce::File selectedFile = fc.getResult();
-                audioProcessor.loadBeatFile(selectedFile);
-            });
-    };
-    addAndMakeVisible(loadBeatButton);
+        const int labelIndex = NUM_ANIMALS + i;
 
+        loadBeatButtons[i].setButtonText("Load Beat " + juce::String(i + 1));
+        loadBeatButtons[i].onClick = [this, i]()
+        {
+            fileChooser = std::make_unique<juce::FileChooser>("Select beat", juce::File{}, "*.wav;*.mp3");
+            fileChooser->launchAsync(juce::FileBrowserComponent::openMode | juce::FileBrowserComponent::canSelectFiles,
+                [this, i](const juce::FileChooser& fc)
+                {
+                    juce::File selectedFile = fc.getResult();
+                    audioProcessor.loadBeatFile(selectedFile, i);
+                });
+        };
+        addAndMakeVisible(loadBeatButtons[i]);
 
-    addAndMakeVisible(playAnimalToggle);
-    playAnimalToggle.setButtonText("Play Animal");
+        playBeatToggles[i].setButtonText("Play Beat " + juce::String(i + 1));
+        playBeatToggles[i].onClick = [this, i]() {
+            audioProcessor.isBeatPlaying[i] = playBeatToggles[i].getToggleState();
+        };
+        addAndMakeVisible(playBeatToggles[i]);
 
-    playAnimalToggle.setToggleState(false, juce::dontSendNotification);
-    playAnimalToggle.onClick = [this]() {
-        audioProcessor.isAnimalPlaying = playAnimalToggle.getToggleState();
-    };
+        beatBpmSliders[i].setRange(1, 300, 1);
+        beatBpmSliders[i].setValue(audioProcessor.beatBpms[i]);
+        beatBpmSliders[i].setTextBoxStyle(juce::Slider::TextBoxRight, false, 60, 20);
+        beatBpmSliders[i].onValueChange = [this, i]() {
+            audioProcessor.setBeatBpm(i, beatBpmSliders[i].getValue());
+        };
+        addAndMakeVisible(beatBpmSliders[i]);
 
+        bpmLabels[labelIndex].setText("BPM " + juce::String(i + 1), juce::dontSendNotification);
+        bpmLabels[labelIndex].setJustificationType(juce::Justification::centredLeft);
+        addAndMakeVisible(bpmLabels[labelIndex]);
+    }
 
-    addAndMakeVisible(playBeatToggle);
-    playBeatToggle.setButtonText("Play Beat");
-
-    playBeatToggle.setToggleState(false, juce::dontSendNotification);
-    playBeatToggle.onClick = [this]() {
-        audioProcessor.isBeatPlaying = playBeatToggle.getToggleState();
-    };
-
-    bpmLabel.setText("BPM", juce::dontSendNotification);
-    bpmLabel.setFont(juce::Font(14.0f)); // ✅ forma válida e funcional
-    bpmLabel.setJustificationType(juce::Justification::centredLeft);
-    addAndMakeVisible(bpmLabel);
-
-    //range of bpm slider
-    animalBpmSlider.setRange(1, 60,1.0f);
-    // put the value from slider to my bpm variable
-    animalBpmSlider.setValue(audioProcessor.animalBpm);
-
-    animalBpmSlider.setTextBoxStyle(juce::Slider::TextBoxRight, false, 60, 20);
-    animalBpmSlider.onValueChange = [this]() {
-    	audioProcessor.setAnimalBpm(animalBpmSlider.getValue());
-	};
-    addAndMakeVisible(animalBpmSlider);
-
-    //range of bpm slider
-    beatBpmSlider.setRange(60, 180,1.0f);
-    // put the value from slider to my bpm variable
-    beatBpmSlider.setValue(audioProcessor.beatBpm);
-
-    beatBpmSlider.setTextBoxStyle(juce::Slider::TextBoxRight, false, 60, 20);
-    beatBpmSlider.onValueChange = [this]() {
-    	audioProcessor.setBeatBpm(beatBpmSlider.getValue());
-	};
-    addAndMakeVisible(beatBpmSlider);
-
-
-    setSize(500, 400);
+    setSize(500, 350);
 }
 
 
@@ -100,22 +96,31 @@ void AnimalBeatAudioProcessorEditor::paint (juce::Graphics& g)
 {
     // (Our component is opaque, so we must completely fill the background with a solid colour)
     g.fillAll (getLookAndFeel().findColour (juce::ResizableWindow::backgroundColourId));
-
-    g.setColour (juce::Colours::white);
-    g.setFont (juce::FontOptions (15.0f));
-    g.drawFittedText ("Hello World!", getLocalBounds(), juce::Justification::centred, 1);
 }
 
 void AnimalBeatAudioProcessorEditor::resized()
 {
-    loadAnimalButton.setBounds(10, 10, 180, 30);
-    loadBeatButton.setBounds(10, 50, 180, 30);
-    playAnimalToggle.setBounds(10, 90, 140, 30);
-    playBeatToggle.setBounds(10, 130, 140, 30);
-    bpmLabel.setBounds(220, 10, 100, 20);    // x, y, width, height
-    animalBpmSlider.setBounds(220, 30, 200, 30);   //
-    beatBpmSlider.setBounds(220, 70, 200, 30);
+    int y = 10;
 
+    for (int i = 0; i < NUM_ANIMALS; ++i)
+    {
+        loadAnimalButtons[i].setBounds(10, y, 140, 25);
+        playAnimalToggles[i].setBounds(160, y, 120, 25);
+        bpmLabels[i].setBounds(290, y, 40, 25);
+        animalBpmSliders[i].setBounds(340, y, 120, 25);
+        y += 35;
+    }
 
+    for (int i = 0; i < NUM_BEATS; ++i)
+    {
+        const int labelIndex = NUM_ANIMALS + i;
+        loadBeatButtons[i].setBounds(10, y, 140, 25);
+        playBeatToggles[i].setBounds(160, y, 120, 25);
+        bpmLabels[labelIndex].setBounds(290, y, 40, 25);
+        beatBpmSliders[i].setBounds(340, y, 120, 25);
+        y += 35;
+    }
 
+    setSize(500, y + 10);
 }
+
