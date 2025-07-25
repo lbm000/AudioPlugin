@@ -146,32 +146,36 @@ void AnimalBeatAudioProcessor::processBlock(juce::AudioBuffer<float>& buffer, ju
 
     for (int sample = 0; sample < bufferNumSamples; ++sample)
     {
+        // Reinicia a leitura dos samples no início do passo se ativado
         for (int i = 0; i < NUM_ANIMALS; ++i)
         {
-            if(animalSampleCounters[i] % globalSamplesPerBeat == 0 &&
-                isAnimalFileLoaded[i] && isAnimalPlaying[i])
+            if (isAnimalFileLoaded[i] && isAnimalPlaying[i] && stepStates[i][currentStep])
             {
-                animalReadPositions[i] = 0;
+                if (animalReadPositions[i] == 0) // só reinicia se ainda não está lendo
+                    animalReadPositions[i] = 0;
             }
         }
 
         for (int i = 0; i < NUM_BEATS; ++i)
         {
-            if (beatSampleCounters[i] % globalSamplesPerBeat == 0 &&
-                isBeatFileLoaded[i] && isBeatPlaying[i])
+            if (isBeatFileLoaded[i] && isBeatPlaying[i] && stepStates[NUM_ANIMALS + i][currentStep])
             {
-                beatReadPositions[i] = 0;
+                if (beatReadPositions[i] == 0)
+                    beatReadPositions[i] = 0;
             }
         }
 
+        // Geração de áudio
         for (int channel = 0; channel < numChannels; ++channel)
         {
             float& outSample = buffer.getWritePointer(channel)[sample];
+            outSample = 0.0f;
 
             // Animais
             for (int i = 0; i < NUM_ANIMALS; ++i)
             {
                 if (isAnimalFileLoaded[i] && isAnimalPlaying[i] &&
+                    stepStates[i][currentStep] &&
                     animalReadPositions[i] < animalBuffers[i].getNumSamples())
                 {
                     float inSample = animalBuffers[i].getReadPointer(channel % animalBuffers[i].getNumChannels())[animalReadPositions[i]];
@@ -183,6 +187,7 @@ void AnimalBeatAudioProcessor::processBlock(juce::AudioBuffer<float>& buffer, ju
             for (int i = 0; i < NUM_BEATS; ++i)
             {
                 if (isBeatFileLoaded[i] && isBeatPlaying[i] &&
+                    stepStates[NUM_ANIMALS + i][currentStep] &&
                     beatReadPositions[i] < beatBuffers[i].getNumSamples())
                 {
                     float inSample = beatBuffers[i].getReadPointer(channel % beatBuffers[i].getNumChannels())[beatReadPositions[i]];
@@ -191,26 +196,46 @@ void AnimalBeatAudioProcessor::processBlock(juce::AudioBuffer<float>& buffer, ju
             }
         }
 
-        // Avança os ponteiros
+        // Avança os ponteiros de leitura
         for (int i = 0; i < NUM_ANIMALS; ++i)
         {
             if (isAnimalFileLoaded[i] && isAnimalPlaying[i] &&
+                stepStates[i][currentStep] &&
                 animalReadPositions[i] < animalBuffers[i].getNumSamples())
+            {
                 ++animalReadPositions[i];
-
-            ++animalSampleCounters[i];
+            }
         }
 
         for (int i = 0; i < NUM_BEATS; ++i)
         {
             if (isBeatFileLoaded[i] && isBeatPlaying[i] &&
+                stepStates[NUM_ANIMALS + i][currentStep] &&
                 beatReadPositions[i] < beatBuffers[i].getNumSamples())
+            {
                 ++beatReadPositions[i];
-
-            ++beatSampleCounters[i];
+            }
         }
     }
+
+
+    int samplesPerStep = globalSamplesPerBeat / 4;
+    sampleCounterForStep += bufferNumSamples;
+
+    if (sampleCounterForStep >= samplesPerStep)
+    {
+        sampleCounterForStep -= samplesPerStep;
+        currentStep = (currentStep + 1) % NUM_STEPS;
+
+        // Reinicia os ponteiros ao mudar de passo
+        for (int i = 0; i < NUM_ANIMALS; ++i)
+            animalReadPositions[i] = 0;
+
+        for (int i = 0; i < NUM_BEATS; ++i)
+            beatReadPositions[i] = 0;
+    }
 }
+
 
 
 

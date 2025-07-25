@@ -76,9 +76,29 @@ AnimalBeatAudioProcessorEditor::AnimalBeatAudioProcessorEditor (AnimalBeatAudioP
     {
         for (int step = 0; step < NUM_STEPS; ++step)
         {
-            addAndMakeVisible(stepButtons[track][step]);
+            auto& button = stepButtons[track][step];
+
+            button.setClickingTogglesState(true);  // button on/off
+
+            button.onClick = [this, track, step]()
+            {
+                bool isOn = stepButtons[track][step].getToggleState();
+                audioProcessor.setStepState(track, step, isOn);
+
+
+                stepButtons[track][step].setColour(
+                    juce::TextButton::buttonColourId,
+                    isOn ? juce::Colours::green : juce::Colours::darkgrey
+                );
+            };
+
+
+            button.setColour(juce::TextButton::buttonColourId, juce::Colours::darkgrey);
+
+            addAndMakeVisible(button);
         }
     }
+
 
 
     for (int step = 0; step < NUM_STEPS; ++step)
@@ -108,6 +128,7 @@ AnimalBeatAudioProcessorEditor::AnimalBeatAudioProcessorEditor (AnimalBeatAudioP
     };
     addAndMakeVisible(globalBpmSlider);
 
+    startTimerHz(10);
 
     setSize(500, 350);
 }
@@ -120,9 +141,21 @@ AnimalBeatAudioProcessorEditor::~AnimalBeatAudioProcessorEditor()
 //==============================================================================
 void AnimalBeatAudioProcessorEditor::paint (juce::Graphics& g)
 {
-    // (Our component is opaque, so we must completely fill the background with a solid colour)
     g.fillAll (getLookAndFeel().findColour (juce::ResizableWindow::backgroundColourId));
+
+
+    int stepSize = 25;
+    int buttonSize = 20;
+    int stepStartX = 480;
+    int stepYStart = 45;
+    int rowHeight = 35;
+
+    int x = stepStartX + audioProcessor.getCurrentStep() * stepSize;
+
+    g.setColour(juce::Colours::yellow.withAlpha(0.3f));
+    g.fillRect(x, stepYStart + 20, stepSize, NUM_TRACKS * rowHeight);
 }
+
 
 void AnimalBeatAudioProcessorEditor::resized()
 {
@@ -131,7 +164,7 @@ void AnimalBeatAudioProcessorEditor::resized()
 
     int y = 45;
 
-    // Posicionamento dos botões de Animal
+
     for (int i = 0; i < NUM_ANIMALS; ++i)
     {
         loadAnimalButtons[i].setBounds(10, y, 140, 25);
@@ -139,7 +172,7 @@ void AnimalBeatAudioProcessorEditor::resized()
         y += 35;
     }
 
-    // Posicionamento dos botões de Beat
+
     for (int i = 0; i < NUM_BEATS; ++i)
     {
         loadBeatButtons[i].setBounds(10, y, 140, 25);
@@ -147,7 +180,7 @@ void AnimalBeatAudioProcessorEditor::resized()
         y += 35;
     }
 
-    // Posicionamento dos stepButtons (sequenciador)
+
     int stepYStart = 45;
     int rowHeight = 35;
     int stepSize = 25;
@@ -167,14 +200,14 @@ void AnimalBeatAudioProcessorEditor::resized()
         }
     }
 
-    // Posicionamento da group box do sequencer
+
     int groupX = stepStartX - 10;
     int groupY = 5;
     int groupWidth = NUM_STEPS * stepSize + 20;
     int groupHeight = stepYStart + NUM_TRACKS * rowHeight + 30;
     stepSequencerGroup.setBounds(groupX, groupY, groupWidth, groupHeight);
 
-    // Posicionamento dos stepLabels (1 a 16)
+
     int labelY = groupY + 10;
     for (int step = 0; step < NUM_STEPS; ++step)
     {
@@ -186,7 +219,13 @@ void AnimalBeatAudioProcessorEditor::resized()
         );
     }
 
-    // Define tamanho da janela
+
     setSize(stepStartX + NUM_STEPS * stepSize + 30, stepYStart + NUM_TRACKS * rowHeight + 60);
+}
+
+void AnimalBeatAudioProcessorEditor::timerCallback()
+{
+    currentStep = audioProcessor.getCurrentStep();
+    repaint();
 }
 

@@ -40,19 +40,15 @@ public:
         g.drawRect(bounds, 1.0f);
     }
 
-    void clicked() override
-    {
 
-        setToggleState(!getToggleState(), juce::dontSendNotification);
-        repaint();
-    }
 };
 
 
 //==============================================================================
 /**
 */
-class AnimalBeatAudioProcessorEditor  : public juce::AudioProcessorEditor
+class AnimalBeatAudioProcessorEditor  : public juce::AudioProcessorEditor,
+                                       private juce::Timer
 {
 public:
     AnimalBeatAudioProcessorEditor (AnimalBeatAudioProcessor&);
@@ -61,6 +57,8 @@ public:
     //==============================================================================
     void paint (juce::Graphics&) override;
     void resized() override;
+    void timerCallback() override;
+
 
 private:
     // This reference is provided as a quick way for your editor to
@@ -88,6 +86,8 @@ private:
 
     std::array<juce::Label, NUM_STEPS> stepLabels;
     juce::GroupComponent stepSequencerGroup;
+
+    int currentStep = 0;
 
 
 

@@ -60,6 +60,13 @@ public:
     std::array<bool, NUM_ANIMALS> isAnimalPlaying {};
     std::array<bool, NUM_BEATS> isBeatPlaying {};
 
+    int getCurrentStep() const { return currentStep; }
+
+    void setStepState(int track, int step, bool isOn)
+    {
+        stepStates[track][step] = isOn;
+    }
+
 
 private:
     juce::AudioFormatManager formatManager;
@@ -77,6 +84,12 @@ private:
 
     float globalBpm = 120.0f;
     int globalSamplesPerBeat = 0;
+
+    static constexpr int NUM_STEPS = 16;
+    static constexpr int NUM_TRACKS = 6;
+    std::array<std::array<bool, NUM_STEPS>, NUM_TRACKS> stepStates {}; // [track][step]
+    int currentStep = 0;
+    int sampleCounterForStep = 0;
 
     //==============================================================================
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (AnimalBeatAudioProcessor)
