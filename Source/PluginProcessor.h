@@ -48,18 +48,18 @@ public:
 
     //===================================
 
-    void setAnimalBpm(int index, float newBpm);
-    void setBeatBpm(int index, float newBpm);
+
     void loadAnimalFile(const juce::File& file, int index);
     void loadBeatFile(const juce::File& file, int index);
 
+    void setGlobalBpm(float newBpm);
+    float getGlobalBpm() const { return globalBpm; }
     static constexpr int NUM_ANIMALS = 4;
     static constexpr int NUM_BEATS = 2;
 
     std::array<bool, NUM_ANIMALS> isAnimalPlaying {};
     std::array<bool, NUM_BEATS> isBeatPlaying {};
-    std::array<float, NUM_ANIMALS> animalBpms {120.0f, 120.0f, 120.0f, 120.0f};
-    std::array<float, NUM_BEATS> beatBpms {120.0f, 120.0f};
+
 
 private:
     juce::AudioFormatManager formatManager;
@@ -68,14 +68,15 @@ private:
     std::array<juce::AudioBuffer<float>, NUM_ANIMALS> animalBuffers;
     std::array<int, NUM_ANIMALS> animalReadPositions {};
     std::array<bool, NUM_ANIMALS> isAnimalFileLoaded {};
-    std::array<int, NUM_ANIMALS> animalSamplesPerBeat {};
     std::array<int, NUM_ANIMALS> animalSampleCounters {};
 
     std::array<juce::AudioBuffer<float>, NUM_BEATS> beatBuffers;
     std::array<int, NUM_BEATS> beatReadPositions {};
     std::array<bool, NUM_BEATS> isBeatFileLoaded {};
-    std::array<int, NUM_BEATS> beatSamplesPerBeat {};
     std::array<int, NUM_BEATS> beatSampleCounters {};
+
+    float globalBpm = 120.0f;
+    int globalSamplesPerBeat = 0;
 
     //==============================================================================
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (AnimalBeatAudioProcessor)

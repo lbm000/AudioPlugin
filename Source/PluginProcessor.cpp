@@ -94,19 +94,14 @@ void AnimalBeatAudioProcessor::changeProgramName (int index, const juce::String&
 //==============================================================================
 void AnimalBeatAudioProcessor::prepareToPlay(double sampleRate, int samplesPerBlock)
 {
+    if (sampleRate > 0.0)
+        globalSamplesPerBeat = static_cast<int>((60.0 / globalBpm) * sampleRate);
+
     for (int i = 0; i < NUM_ANIMALS; ++i)
-    {
         animalSampleCounters[i] = 0;
-        if (getSampleRate() > 0.0)
-            animalSamplesPerBeat[i] = static_cast<int>((60.0 / animalBpms[i]) * sampleRate);
-    }
 
     for (int i = 0; i < NUM_BEATS; ++i)
-    {
         beatSampleCounters[i] = 0;
-        if (getSampleRate() > 0.0)
-            beatSamplesPerBeat[i] = static_cast<int>((60.0 / beatBpms[i]) * sampleRate);
-    }
 }
 
 
@@ -153,7 +148,7 @@ void AnimalBeatAudioProcessor::processBlock(juce::AudioBuffer<float>& buffer, ju
     {
         for (int i = 0; i < NUM_ANIMALS; ++i)
         {
-            if (animalSampleCounters[i] % animalSamplesPerBeat[i] == 0 &&
+            if(animalSampleCounters[i] % globalSamplesPerBeat == 0 &&
                 isAnimalFileLoaded[i] && isAnimalPlaying[i])
             {
                 animalReadPositions[i] = 0;
@@ -162,7 +157,7 @@ void AnimalBeatAudioProcessor::processBlock(juce::AudioBuffer<float>& buffer, ju
 
         for (int i = 0; i < NUM_BEATS; ++i)
         {
-            if (beatSampleCounters[i] % beatSamplesPerBeat[i] == 0 &&
+            if (beatSampleCounters[i] % globalSamplesPerBeat == 0 &&
                 isBeatFileLoaded[i] && isBeatPlaying[i])
             {
                 beatReadPositions[i] = 0;
@@ -296,24 +291,11 @@ void AnimalBeatAudioProcessor::loadBeatFile(const juce::File& file, int index)
 }
 
 
-void AnimalBeatAudioProcessor::setAnimalBpm(int index, float newBpm)
+void AnimalBeatAudioProcessor::setGlobalBpm(float newBpm)
 {
-    if (index >= 0 && index < NUM_ANIMALS)
-    {
-        animalBpms[index] = newBpm;
-        if (getSampleRate() > 0.0)
-            animalSamplesPerBeat[index] = static_cast<int>((60.0 / animalBpms[index]) * getSampleRate());
-    }
-}
-
-void AnimalBeatAudioProcessor::setBeatBpm(int index, float newBpm)
-{
-    if (index >= 0 && index < NUM_BEATS)
-    {
-        beatBpms[index] = newBpm;
-        if (getSampleRate() > 0.0)
-            beatSamplesPerBeat[index] = static_cast<int>((60.0 / beatBpms[index]) * getSampleRate());
-    }
+    globalBpm = newBpm;
+    if (getSampleRate() > 0.0)
+        globalSamplesPerBeat = static_cast<int>((60.0 / globalBpm) * getSampleRate());
 }
 
 

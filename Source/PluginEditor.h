@@ -72,13 +72,14 @@ private:
 
     std::array<juce::TextButton, NUM_ANIMALS> loadAnimalButtons;
     std::array<juce::TextButton, NUM_ANIMALS> playAnimalButtons;
-    std::array<juce::Slider, NUM_ANIMALS> animalBpmSliders;
+
 
     std::array<juce::TextButton, NUM_BEATS> loadBeatButtons;
     std::array<juce::TextButton, NUM_BEATS> playBeatButtons;
-    std::array<juce::Slider, NUM_BEATS> beatBpmSliders;
 
-    std::array<juce::Label, NUM_ANIMALS + NUM_BEATS> bpmLabels;
+    juce::Slider globalBpmSlider;
+    juce::Label globalBpmLabel;
+
 
     // Pointer for selection of audio files
     std::unique_ptr<juce::FileChooser> fileChooser;
@@ -87,6 +88,8 @@ private:
 
     std::array<juce::Label, NUM_STEPS> stepLabels;
     juce::GroupComponent stepSequencerGroup;
+
+
 
 
 

@@ -38,17 +38,9 @@ AnimalBeatAudioProcessorEditor::AnimalBeatAudioProcessorEditor (AnimalBeatAudioP
         playAnimalButtons[i].setColour(juce::TextButton::buttonColourId, juce::Colours::red); // Estado inicial
         addAndMakeVisible(playAnimalButtons[i]);
 
-        animalBpmSliders[i].setRange(1, 300, 1);
-        animalBpmSliders[i].setValue(audioProcessor.animalBpms[i]);
-        animalBpmSliders[i].setTextBoxStyle(juce::Slider::TextBoxRight, false, 60, 20);
-        animalBpmSliders[i].onValueChange = [this, i]() {
-            audioProcessor.setAnimalBpm(i, animalBpmSliders[i].getValue());
-        };
-        addAndMakeVisible(animalBpmSliders[i]);
 
-        bpmLabels[i].setText("BPM " + juce::String(i + 1), juce::dontSendNotification);
-        bpmLabels[i].setJustificationType(juce::Justification::centredLeft);
-        addAndMakeVisible(bpmLabels[i]);
+
+
     }
 
     for (int i = 0; i < NUM_BEATS; ++i)
@@ -78,18 +70,6 @@ AnimalBeatAudioProcessorEditor::AnimalBeatAudioProcessorEditor (AnimalBeatAudioP
         playBeatButtons[i].setColour(juce::TextButton::buttonColourId, juce::Colours::red);
         addAndMakeVisible(playBeatButtons[i]);
 
-
-        beatBpmSliders[i].setRange(1, 300, 1);
-        beatBpmSliders[i].setValue(audioProcessor.beatBpms[i]);
-        beatBpmSliders[i].setTextBoxStyle(juce::Slider::TextBoxRight, false, 60, 20);
-        beatBpmSliders[i].onValueChange = [this, i]() {
-            audioProcessor.setBeatBpm(i, beatBpmSliders[i].getValue());
-        };
-        addAndMakeVisible(beatBpmSliders[i]);
-
-        bpmLabels[labelIndex].setText("BPM " + juce::String(i + 1), juce::dontSendNotification);
-        bpmLabels[labelIndex].setJustificationType(juce::Justification::centredLeft);
-        addAndMakeVisible(bpmLabels[labelIndex]);
     }
 
     for (int track = 0; track < NUM_TRACKS; ++track)
@@ -109,11 +89,25 @@ AnimalBeatAudioProcessorEditor::AnimalBeatAudioProcessorEditor (AnimalBeatAudioP
         addAndMakeVisible(stepLabels[step]);
     }
 
-    // Inicializa a "caixa" visual do step sequencer
+
     stepSequencerGroup.setText("Step Sequencer");
     stepSequencerGroup.setColour(juce::GroupComponent::outlineColourId, juce::Colours::grey);
     stepSequencerGroup.setColour(juce::GroupComponent::textColourId, juce::Colours::white);
     addAndMakeVisible(stepSequencerGroup);
+
+
+    globalBpmLabel.setText("Global BPM", juce::dontSendNotification);
+    globalBpmLabel.setJustificationType(juce::Justification::centredLeft);
+    addAndMakeVisible(globalBpmLabel);
+
+    globalBpmSlider.setRange(1.0, 300.0, 1.0);
+    globalBpmSlider.setValue(audioProcessor.getGlobalBpm());
+    globalBpmSlider.setTextBoxStyle(juce::Slider::TextBoxRight, false, 60, 20);
+    globalBpmSlider.onValueChange = [this]() {
+        audioProcessor.setGlobalBpm(globalBpmSlider.getValue());
+    };
+    addAndMakeVisible(globalBpmSlider);
+
 
     setSize(500, 350);
 }
@@ -132,29 +126,29 @@ void AnimalBeatAudioProcessorEditor::paint (juce::Graphics& g)
 
 void AnimalBeatAudioProcessorEditor::resized()
 {
-    int y = 10;
+    globalBpmLabel.setBounds(10, 10, 100, 25);
+    globalBpmSlider.setBounds(110, 10, 150, 25);
 
+    int y = 45;
+
+    // Posicionamento dos botões de Animal
     for (int i = 0; i < NUM_ANIMALS; ++i)
     {
         loadAnimalButtons[i].setBounds(10, y, 140, 25);
         playAnimalButtons[i].setBounds(160, y, 120, 25);
-        bpmLabels[i].setBounds(290, y, 40, 25);
-        animalBpmSliders[i].setBounds(310, y, 190, 25);
         y += 35;
     }
 
+    // Posicionamento dos botões de Beat
     for (int i = 0; i < NUM_BEATS; ++i)
     {
-        const int labelIndex = NUM_ANIMALS + i;
         loadBeatButtons[i].setBounds(10, y, 140, 25);
         playBeatButtons[i].setBounds(160, y, 120, 25);
-        bpmLabels[labelIndex].setBounds(290, y, 40, 25);
-        beatBpmSliders[i].setBounds(310, y, 190, 25);
         y += 35;
     }
 
-
-    int rowY = 10;
+    // Posicionamento dos stepButtons (sequenciador)
+    int stepYStart = 45;
     int rowHeight = 35;
     int stepSize = 25;
     int buttonSize = 20;
@@ -162,44 +156,25 @@ void AnimalBeatAudioProcessorEditor::resized()
 
     for (int i = 0; i < NUM_TRACKS; ++i)
     {
-        if (i < NUM_ANIMALS)
-        {
-            loadAnimalButtons[i].setBounds(10, rowY, 140, 25);
-            playAnimalButtons[i].setBounds(160, rowY, 100, 25);
-            bpmLabels[i].setBounds(270, rowY, 40, 25);
-            animalBpmSliders[i].setBounds(310, rowY, 120, 25);
-        }
-        else
-        {
-            int beatIndex = i - NUM_ANIMALS;
-            loadBeatButtons[beatIndex].setBounds(10, rowY, 140, 25);
-            playBeatButtons[beatIndex].setBounds(160, rowY, 100, 25);
-            bpmLabels[i].setBounds(270, rowY, 40, 25);
-            beatBpmSliders[beatIndex].setBounds(310, rowY, 120, 25);
-        }
-
         for (int step = 0; step < NUM_STEPS; ++step)
         {
             stepButtons[i][step].setBounds(
                 stepStartX + step * stepSize,
-                rowY + 20,
+                stepYStart + i * rowHeight + 20,
                 buttonSize,
                 buttonSize
             );
         }
-
-        rowY += rowHeight;
     }
 
-
+    // Posicionamento da group box do sequencer
     int groupX = stepStartX - 10;
     int groupY = 5;
     int groupWidth = NUM_STEPS * stepSize + 20;
-    int groupHeight = rowY + 5;
-
+    int groupHeight = stepYStart + NUM_TRACKS * rowHeight + 30;
     stepSequencerGroup.setBounds(groupX, groupY, groupWidth, groupHeight);
 
-
+    // Posicionamento dos stepLabels (1 a 16)
     int labelY = groupY + 10;
     for (int step = 0; step < NUM_STEPS; ++step)
     {
@@ -211,10 +186,7 @@ void AnimalBeatAudioProcessorEditor::resized()
         );
     }
 
-
-    setSize(stepStartX + NUM_STEPS * stepSize + 20, rowY + 40);
-
-
-
+    // Define tamanho da janela
+    setSize(stepStartX + NUM_STEPS * stepSize + 30, stepYStart + NUM_TRACKS * rowHeight + 60);
 }
 
