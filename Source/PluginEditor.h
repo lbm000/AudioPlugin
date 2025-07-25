@@ -16,6 +16,39 @@
 #include "PluginProcessor.h"
 
 
+static constexpr int NUM_TRACKS = AnimalBeatAudioProcessor::NUM_ANIMALS + AnimalBeatAudioProcessor::NUM_BEATS;
+static constexpr int NUM_STEPS = 16;
+
+
+class StepButton : public juce::Button
+{
+public:
+    StepButton() : juce::Button("Step") {}
+
+    void paintButton(juce::Graphics& g, bool shouldDrawButtonAsHighlighted, bool shouldDrawButtonAsDown) override
+    {
+        auto bounds = getLocalBounds().toFloat();
+
+
+        auto bgColour = getToggleState() ? juce::Colours::white : findColour(juce::ResizableWindow::backgroundColourId);
+        auto borderColour = juce::Colours::white;
+
+        g.setColour(bgColour);
+        g.fillRect(bounds);
+
+        g.setColour(borderColour);
+        g.drawRect(bounds, 1.0f);
+    }
+
+    void clicked() override
+    {
+
+        setToggleState(!getToggleState(), juce::dontSendNotification);
+        repaint();
+    }
+};
+
+
 //==============================================================================
 /**
 */
@@ -38,11 +71,11 @@ private:
     static constexpr int NUM_BEATS = 2;
 
     std::array<juce::TextButton, NUM_ANIMALS> loadAnimalButtons;
-    std::array<juce::ToggleButton, NUM_ANIMALS> playAnimalToggles;
+    std::array<juce::TextButton, NUM_ANIMALS> playAnimalButtons;
     std::array<juce::Slider, NUM_ANIMALS> animalBpmSliders;
 
     std::array<juce::TextButton, NUM_BEATS> loadBeatButtons;
-    std::array<juce::ToggleButton, NUM_BEATS> playBeatToggles;
+    std::array<juce::TextButton, NUM_BEATS> playBeatButtons;
     std::array<juce::Slider, NUM_BEATS> beatBpmSliders;
 
     std::array<juce::Label, NUM_ANIMALS + NUM_BEATS> bpmLabels;
@@ -50,6 +83,15 @@ private:
     // Pointer for selection of audio files
     std::unique_ptr<juce::FileChooser> fileChooser;
 
+    StepButton stepButtons[NUM_TRACKS][NUM_STEPS];
+
+    std::array<juce::Label, NUM_STEPS> stepLabels;
+    juce::GroupComponent stepSequencerGroup;
+
+
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (AnimalBeatAudioProcessorEditor)
 };
+
+
+
