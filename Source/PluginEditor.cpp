@@ -14,51 +14,70 @@ AnimalBeatAudioProcessorEditor::AnimalBeatAudioProcessorEditor (AnimalBeatAudioP
     : AudioProcessorEditor (&p), audioProcessor (p)
 {
     for (int i = 0; i < NUM_ANIMALS; ++i)
+{
+    loadAnimalButtons[i].setButtonText("Load Animal " + juce::String(i + 1));
+    loadAnimalButtons[i].onClick = [this, i]()
     {
-        loadAnimalButtons[i].setButtonText("Load Animal " + juce::String(i + 1));
-        loadAnimalButtons[i].onClick = [this, i]()
-        {
-            fileChooser = std::make_unique<juce::FileChooser>("Select animal sound", juce::File{}, "*.wav;*.mp3");
-            fileChooser->launchAsync(juce::FileBrowserComponent::openMode | juce::FileBrowserComponent::canSelectFiles,
-                [this, i](const juce::FileChooser& fc)
-                {
-                    juce::File selectedFile = fc.getResult();
-                    audioProcessor.loadAnimalFile(selectedFile, i);
-                });
-        };
-        addAndMakeVisible(loadAnimalButtons[i]);
+        fileChooser = std::make_unique<juce::FileChooser>("Select animal sound", juce::File{}, "*.wav;*.mp3");
+        fileChooser->launchAsync(juce::FileBrowserComponent::openMode | juce::FileBrowserComponent::canSelectFiles,
+            [this, i](const juce::FileChooser& fc)
+            {
+                juce::File selectedFile = fc.getResult();
+                audioProcessor.loadAnimalFile(selectedFile, i);
+            });
+    };
+    addAndMakeVisible(loadAnimalButtons[i]);
 
-        playAnimalButtons[i].setButtonText("Play Animal " + juce::String(i + 1));
-        playAnimalButtons[i].onClick = [this, i]() {
-            audioProcessor.isAnimalPlaying[i] = !audioProcessor.isAnimalPlaying[i];
+    playAnimalButtons[i].setButtonText("Play Animal " + juce::String(i + 1));
+    playAnimalButtons[i].onClick = [this, i]() {
+        audioProcessor.isAnimalPlaying[i] = !audioProcessor.isAnimalPlaying[i];
 
-            auto isOn = audioProcessor.isAnimalPlaying[i];
-            playAnimalButtons[i].setColour(juce::TextButton::buttonColourId, isOn ? juce::Colours::blue : juce::Colours::red);
-        };
-        playAnimalButtons[i].setColour(juce::TextButton::buttonColourId, juce::Colours::red);
-        addAndMakeVisible(playAnimalButtons[i]);
+        auto isOn = audioProcessor.isAnimalPlaying[i];
+        playAnimalButtons[i].setColour(juce::TextButton::buttonColourId, isOn ? juce::Colours::blue : juce::Colours::red);
+    };
+    playAnimalButtons[i].setColour(juce::TextButton::buttonColourId, juce::Colours::red);
+    addAndMakeVisible(playAnimalButtons[i]);
 
-        filterToggleButtons[i].setButtonText("LPF " + juce::String(i + 1));
-        filterToggleButtons[i].onClick = [this, i]() {
-            bool isOn = !audioProcessor.getFilterEnabled(i);
-            audioProcessor.setFilterEnabled(i, isOn);
-            filterToggleButtons[i].setColour(juce::TextButton::buttonColourId,
-                isOn ? juce::Colours::green : juce::Colours::darkgrey);
-        };
-        filterToggleButtons[i].setColour(juce::TextButton::buttonColourId, juce::Colours::darkgrey);
-        addAndMakeVisible(filterToggleButtons[i]);
+    // Low-Pass Filter toggle
+    filterToggleButtons[i].setButtonText("LPF " + juce::String(i + 1));
+    filterToggleButtons[i].onClick = [this, i]() {
+        bool isOn = !audioProcessor.getFilterEnabled(i);
+        audioProcessor.setFilterEnabled(i, isOn);
+        filterToggleButtons[i].setColour(juce::TextButton::buttonColourId,
+            isOn ? juce::Colours::green : juce::Colours::darkgrey);
+    };
+    filterToggleButtons[i].setColour(juce::TextButton::buttonColourId, juce::Colours::darkgrey);
+    addAndMakeVisible(filterToggleButtons[i]);
 
+    // Low-Pass Filter cutoff slider
+    filterCutoffSliders[i].setRange(100.0, 10000.0, 1.0);
+    filterCutoffSliders[i].setValue(1000.0);
+    filterCutoffSliders[i].setTextBoxStyle(juce::Slider::TextBoxRight, false, 60, 20);
+    filterCutoffSliders[i].onValueChange = [this, i]() {
+        audioProcessor.setFilterCutoff(i, filterCutoffSliders[i].getValue());
+    };
+    addAndMakeVisible(filterCutoffSliders[i]);
 
-        filterCutoffSliders[i].setRange(100.0, 10000.0, 1.0);
-        filterCutoffSliders[i].setValue(1000.0);
-        filterCutoffSliders[i].setTextBoxStyle(juce::Slider::TextBoxRight, false, 60, 20);
-        filterCutoffSliders[i].onValueChange = [this, i]() {
-            audioProcessor.setFilterCutoff(i, filterCutoffSliders[i].getValue());
-        };
-        addAndMakeVisible(filterCutoffSliders[i]);
+    // High-Pass Filter toggle
+    highpassToggleButtons[i].setButtonText("HPF " + juce::String(i + 1));
+    highpassToggleButtons[i].onClick = [this, i]() {
+        bool isOn = !audioProcessor.getHighpassEnabled(i);
+        audioProcessor.setHighpassEnabled(i, isOn);
+        highpassToggleButtons[i].setColour(juce::TextButton::buttonColourId,
+            isOn ? juce::Colours::green : juce::Colours::darkgrey);
+    };
+    highpassToggleButtons[i].setColour(juce::TextButton::buttonColourId, juce::Colours::darkgrey);
+    addAndMakeVisible(highpassToggleButtons[i]);
 
-
-    }
+    // High-Pass Filter cutoff slider
+    highpassCutoffSliders[i].setRange(100.0, 10000.0, 1.0);
+    highpassCutoffSliders[i].setValue(1000.0);
+    highpassCutoffSliders[i].setTextBoxStyle(juce::Slider::TextBoxRight, false, 60, 20);
+    highpassCutoffSliders[i].onValueChange = [this, i]() {
+        audioProcessor.setHighpassCutoff(i, highpassCutoffSliders[i].getValue());
+    };
+    addAndMakeVisible(highpassCutoffSliders[i]);
+}
 
     for (int i = 0; i < NUM_BEATS; ++i)
     {
@@ -164,7 +183,7 @@ void AnimalBeatAudioProcessorEditor::paint (juce::Graphics& g)
     int stepSize = 25;
     int buttonSize = 20;
     int stepStartX = 480;
-    int stepYStart = 45;
+    int stepYStart = 250;
     int rowHeight = 35;
 
     int x = stepStartX + audioProcessor.getCurrentStep() * stepSize;
@@ -188,6 +207,10 @@ void AnimalBeatAudioProcessorEditor::resized()
         playAnimalButtons[i].setBounds(160, y, 120, 25);
         filterToggleButtons[i].setBounds(290, y, 50, 25);
         filterCutoffSliders[i].setBounds(350, y, 120, 25);
+
+        highpassToggleButtons[i].setBounds(480, y, 50, 25);
+        highpassCutoffSliders[i].setBounds(540, y, 120, 25);
+
         y += 35;
     }
 
@@ -200,7 +223,7 @@ void AnimalBeatAudioProcessorEditor::resized()
     }
 
 
-    int stepYStart = 45;
+    int stepYStart = 250;
     int rowHeight = 35;
     int stepSize = 25;
     int buttonSize = 20;
@@ -221,7 +244,7 @@ void AnimalBeatAudioProcessorEditor::resized()
 
 
     int groupX = stepStartX - 10;
-    int groupY = 5;
+    int groupY = stepYStart;
     int groupWidth = NUM_STEPS * stepSize + 20;
     int groupHeight = stepYStart + NUM_TRACKS * rowHeight + 30;
     stepSequencerGroup.setBounds(groupX, groupY, groupWidth, groupHeight);

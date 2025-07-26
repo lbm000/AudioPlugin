@@ -92,6 +92,9 @@ private:
     juce::TextButton filterToggleButtons[NUM_ANIMALS];
     juce::Slider filterCutoffSliders[NUM_ANIMALS];
 
+    std::array<juce::TextButton, NUM_ANIMALS> highpassToggleButtons;
+    std::array<juce::Slider, NUM_ANIMALS> highpassCutoffSliders;
+
 
 
 

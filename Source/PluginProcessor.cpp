@@ -103,7 +103,7 @@ void AnimalBeatAudioProcessor::prepareToPlay(double sampleRate, int samplesPerBl
     for (int i = 0; i < NUM_BEATS; ++i)
         beatSampleCounters[i] = 0;
 
-    //Initialization of the Low-Pass filters per sample
+    //  Low-Pass
     for (int i = 0; i < NUM_ANIMALS; ++i)
     {
         animalFilters[i].reset();
@@ -113,7 +113,19 @@ void AnimalBeatAudioProcessor::prepareToPlay(double sampleRate, int samplesPerBl
         float cutoff = cutoffFrequencies[i] > 0.0f ? cutoffFrequencies[i] : 2000.0f;
         animalFilters[i].setCutoffFrequency(cutoff);
     }
+
+    // High-Pass
+    for (int i = 0; i < NUM_ANIMALS; ++i)
+    {
+        animalHighPassFilters[i].reset();
+        animalHighPassFilters[i].prepare({ sampleRate, static_cast<juce::uint32>(samplesPerBlock), 1 });
+        animalHighPassFilters[i].setType(juce::dsp::StateVariableTPTFilterType::highpass);
+
+        float hpfCutoff = highPassCutoffFrequencies[i] > 0.0f ? highPassCutoffFrequencies[i] : 1000.0f;
+        animalHighPassFilters[i].setCutoffFrequency(hpfCutoff);
+    }
 }
+
 
 
 
@@ -196,6 +208,9 @@ void AnimalBeatAudioProcessor::processBlock(juce::AudioBuffer<float>& buffer, ju
 
                     if (isFilterEnabled[i])
                         inSample = animalFilters[i].processSample(0, inSample);
+
+                    if (isHighPassEnabled[i])
+                        inSample = animalHighPassFilters[i].processSample(0, inSample);
 
                     outSample += inSample;
                 }
@@ -357,6 +372,28 @@ void AnimalBeatAudioProcessor::setFilterCutoff(int index, float cutoffHz)
         animalFilters[index].setCutoffFrequency(cutoffHz);
     }
 }
+
+bool AnimalBeatAudioProcessor::getHighpassEnabled(int index) const
+{
+    return isHighPassEnabled[index];
+}
+
+void AnimalBeatAudioProcessor::setHighpassEnabled(int index, bool enabled)
+{
+    isHighPassEnabled[index] = enabled;
+}
+
+float AnimalBeatAudioProcessor::getHighpassCutoff(int index) const
+{
+    return highPassCutoffFrequencies[index];
+}
+
+void AnimalBeatAudioProcessor::setHighpassCutoff(int index, float cutoff)
+{
+    highPassCutoffFrequencies[index] = cutoff;
+    animalHighPassFilters[index].setCutoffFrequency(cutoff);
+}
+
 
 
 

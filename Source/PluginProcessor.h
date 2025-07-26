@@ -75,6 +75,13 @@ public:
 
     bool getFilterEnabled(int index) const { return isFilterEnabled[index]; }
 
+    bool getHighpassEnabled(int index) const;
+    void setHighpassEnabled(int index, bool enabled);
+
+    float getHighpassCutoff(int index) const;
+    void setHighpassCutoff(int index, float cutoff);
+
+
 private:
     juce::AudioFormatManager formatManager;
 
@@ -103,6 +110,12 @@ private:
     std::array<juce::dsp::StateVariableTPTFilter<float>, NUM_ANIMALS> animalFilters;
     std::array<bool, NUM_ANIMALS> isFilterEnabled {};
     std::array<float, NUM_ANIMALS> cutoffFrequencies {};
+
+    // filter high pass
+    std::array<juce::dsp::StateVariableTPTFilter<float>, NUM_ANIMALS> animalHighPassFilters;
+    std::array<bool, NUM_ANIMALS> isHighPassEnabled {};
+    std::array<float, NUM_ANIMALS> highPassCutoffFrequencies {};
+
 
     //==============================================================================
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (AnimalBeatAudioProcessor)
