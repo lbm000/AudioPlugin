@@ -89,6 +89,9 @@ private:
 
     int currentStep = 0;
 
+    juce::TextButton filterToggleButtons[NUM_ANIMALS];
+    juce::Slider filterCutoffSliders[NUM_ANIMALS];
+
 
 
 

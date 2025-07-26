@@ -5,6 +5,7 @@
 #include <juce_gui_basics/juce_gui_basics.h>
 #include <juce_core/juce_core.h>
 #include <juce_audio_formats/juce_audio_formats.h>
+#include <juce_dsp/juce_dsp.h>
 
 //==============================================================================
 class AnimalBeatAudioProcessor  : public juce::AudioProcessor
@@ -67,6 +68,12 @@ public:
         stepStates[track][step] = isOn;
     }
 
+    void setFilterEnabled(int index, bool enabled);
+
+
+    void setFilterCutoff(int index, float cutoffHz);
+
+    bool getFilterEnabled(int index) const { return isFilterEnabled[index]; }
 
 private:
     juce::AudioFormatManager formatManager;
@@ -90,6 +97,12 @@ private:
     std::array<std::array<bool, NUM_STEPS>, NUM_TRACKS> stepStates {}; // [track][step]
     int currentStep = 0;
     int sampleCounterForStep = 0;
+
+
+    // filter low pass
+    std::array<juce::dsp::StateVariableTPTFilter<float>, NUM_ANIMALS> animalFilters;
+    std::array<bool, NUM_ANIMALS> isFilterEnabled {};
+    std::array<float, NUM_ANIMALS> cutoffFrequencies {};
 
     //==============================================================================
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (AnimalBeatAudioProcessor)

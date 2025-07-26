@@ -30,15 +30,32 @@ AnimalBeatAudioProcessorEditor::AnimalBeatAudioProcessorEditor (AnimalBeatAudioP
 
         playAnimalButtons[i].setButtonText("Play Animal " + juce::String(i + 1));
         playAnimalButtons[i].onClick = [this, i]() {
-            audioProcessor.isAnimalPlaying[i] = !audioProcessor.isAnimalPlaying[i]; // Toggle manual
+            audioProcessor.isAnimalPlaying[i] = !audioProcessor.isAnimalPlaying[i];
 
             auto isOn = audioProcessor.isAnimalPlaying[i];
             playAnimalButtons[i].setColour(juce::TextButton::buttonColourId, isOn ? juce::Colours::blue : juce::Colours::red);
         };
-        playAnimalButtons[i].setColour(juce::TextButton::buttonColourId, juce::Colours::red); // Estado inicial
+        playAnimalButtons[i].setColour(juce::TextButton::buttonColourId, juce::Colours::red);
         addAndMakeVisible(playAnimalButtons[i]);
 
+        filterToggleButtons[i].setButtonText("LPF " + juce::String(i + 1));
+        filterToggleButtons[i].onClick = [this, i]() {
+            bool isOn = !audioProcessor.getFilterEnabled(i);
+            audioProcessor.setFilterEnabled(i, isOn);
+            filterToggleButtons[i].setColour(juce::TextButton::buttonColourId,
+                isOn ? juce::Colours::green : juce::Colours::darkgrey);
+        };
+        filterToggleButtons[i].setColour(juce::TextButton::buttonColourId, juce::Colours::darkgrey);
+        addAndMakeVisible(filterToggleButtons[i]);
 
+
+        filterCutoffSliders[i].setRange(100.0, 10000.0, 1.0);
+        filterCutoffSliders[i].setValue(1000.0);
+        filterCutoffSliders[i].setTextBoxStyle(juce::Slider::TextBoxRight, false, 60, 20);
+        filterCutoffSliders[i].onValueChange = [this, i]() {
+            audioProcessor.setFilterCutoff(i, filterCutoffSliders[i].getValue());
+        };
+        addAndMakeVisible(filterCutoffSliders[i]);
 
 
     }
@@ -169,6 +186,8 @@ void AnimalBeatAudioProcessorEditor::resized()
     {
         loadAnimalButtons[i].setBounds(10, y, 140, 25);
         playAnimalButtons[i].setBounds(160, y, 120, 25);
+        filterToggleButtons[i].setBounds(290, y, 50, 25);
+        filterCutoffSliders[i].setBounds(350, y, 120, 25);
         y += 35;
     }
 

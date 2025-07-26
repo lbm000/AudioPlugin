@@ -102,7 +102,19 @@ void AnimalBeatAudioProcessor::prepareToPlay(double sampleRate, int samplesPerBl
 
     for (int i = 0; i < NUM_BEATS; ++i)
         beatSampleCounters[i] = 0;
+
+    //Initialization of the Low-Pass filters per sample
+    for (int i = 0; i < NUM_ANIMALS; ++i)
+    {
+        animalFilters[i].reset();
+        animalFilters[i].prepare({ sampleRate, static_cast<juce::uint32>(samplesPerBlock), 1 });
+        animalFilters[i].setType(juce::dsp::StateVariableTPTFilterType::lowpass);
+
+        float cutoff = cutoffFrequencies[i] > 0.0f ? cutoffFrequencies[i] : 2000.0f;
+        animalFilters[i].setCutoffFrequency(cutoff);
+    }
 }
+
 
 
 
@@ -146,12 +158,12 @@ void AnimalBeatAudioProcessor::processBlock(juce::AudioBuffer<float>& buffer, ju
 
     for (int sample = 0; sample < bufferNumSamples; ++sample)
     {
-        // Reinicia a leitura dos samples no início do passo se ativado
+
         for (int i = 0; i < NUM_ANIMALS; ++i)
         {
             if (isAnimalFileLoaded[i] && isAnimalPlaying[i] && stepStates[i][currentStep])
             {
-                if (animalReadPositions[i] == 0) // só reinicia se ainda não está lendo
+                if (animalReadPositions[i] == 0)
                     animalReadPositions[i] = 0;
             }
         }
@@ -165,38 +177,45 @@ void AnimalBeatAudioProcessor::processBlock(juce::AudioBuffer<float>& buffer, ju
             }
         }
 
-        // Geração de áudio
+
         for (int channel = 0; channel < numChannels; ++channel)
         {
             float& outSample = buffer.getWritePointer(channel)[sample];
             outSample = 0.0f;
 
-            // Animais
+
             for (int i = 0; i < NUM_ANIMALS; ++i)
             {
                 if (isAnimalFileLoaded[i] && isAnimalPlaying[i] &&
                     stepStates[i][currentStep] &&
                     animalReadPositions[i] < animalBuffers[i].getNumSamples())
                 {
-                    float inSample = animalBuffers[i].getReadPointer(channel % animalBuffers[i].getNumChannels())[animalReadPositions[i]];
+                    float inSample = animalBuffers[i]
+                        .getReadPointer(channel % animalBuffers[i].getNumChannels())[animalReadPositions[i]];
+
+
+                    if (isFilterEnabled[i])
+                        inSample = animalFilters[i].processSample(0, inSample);
+
                     outSample += inSample;
                 }
             }
 
-            // Beats
+
             for (int i = 0; i < NUM_BEATS; ++i)
             {
                 if (isBeatFileLoaded[i] && isBeatPlaying[i] &&
                     stepStates[NUM_ANIMALS + i][currentStep] &&
                     beatReadPositions[i] < beatBuffers[i].getNumSamples())
                 {
-                    float inSample = beatBuffers[i].getReadPointer(channel % beatBuffers[i].getNumChannels())[beatReadPositions[i]];
+                    float inSample = beatBuffers[i]
+                        .getReadPointer(channel % beatBuffers[i].getNumChannels())[beatReadPositions[i]];
                     outSample += inSample;
                 }
             }
         }
 
-        // Avança os ponteiros de leitura
+
         for (int i = 0; i < NUM_ANIMALS; ++i)
         {
             if (isAnimalFileLoaded[i] && isAnimalPlaying[i] &&
@@ -218,7 +237,6 @@ void AnimalBeatAudioProcessor::processBlock(juce::AudioBuffer<float>& buffer, ju
         }
     }
 
-
     int samplesPerStep = globalSamplesPerBeat / 4;
     sampleCounterForStep += bufferNumSamples;
 
@@ -227,7 +245,6 @@ void AnimalBeatAudioProcessor::processBlock(juce::AudioBuffer<float>& buffer, ju
         sampleCounterForStep -= samplesPerStep;
         currentStep = (currentStep + 1) % NUM_STEPS;
 
-        // Reinicia os ponteiros ao mudar de passo
         for (int i = 0; i < NUM_ANIMALS; ++i)
             animalReadPositions[i] = 0;
 
@@ -235,6 +252,7 @@ void AnimalBeatAudioProcessor::processBlock(juce::AudioBuffer<float>& buffer, ju
             beatReadPositions[i] = 0;
     }
 }
+
 
 
 
@@ -322,5 +340,23 @@ void AnimalBeatAudioProcessor::setGlobalBpm(float newBpm)
     if (getSampleRate() > 0.0)
         globalSamplesPerBeat = static_cast<int>((60.0 / globalBpm) * getSampleRate());
 }
+
+void AnimalBeatAudioProcessor::setFilterEnabled(int index, bool enabled)
+{
+    if (index >= 0 && index < NUM_ANIMALS)
+        isFilterEnabled[index] = enabled;
+}
+
+void AnimalBeatAudioProcessor::setFilterCutoff(int index, float cutoffHz)
+{
+    if (index >= 0 && index < NUM_ANIMALS)
+    {
+        cutoffFrequencies[index] = cutoffHz;
+
+
+        animalFilters[index].setCutoffFrequency(cutoffHz);
+    }
+}
+
 
 
