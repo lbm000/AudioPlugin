@@ -16,7 +16,7 @@
 #include "PluginProcessor.h"
 
 
-static constexpr int NUM_TRACKS = AnimalBeatAudioProcessor::NUM_ANIMALS + AnimalBeatAudioProcessor::NUM_BEATS;
+static constexpr int NUM_TRACKS = SampleAudioProcessor::NUM_SAMPLES;
 static constexpr int NUM_STEPS = 16;
 
 
@@ -47,12 +47,12 @@ public:
 //==============================================================================
 /**
 */
-class AnimalBeatAudioProcessorEditor  : public juce::AudioProcessorEditor,
+class SampleAudioProcessorEditor  : public juce::AudioProcessorEditor,
                                        private juce::Timer
 {
 public:
-    AnimalBeatAudioProcessorEditor (AnimalBeatAudioProcessor&);
-    ~AnimalBeatAudioProcessorEditor() override;
+    SampleAudioProcessorEditor (SampleAudioProcessor&);
+    ~SampleAudioProcessorEditor() override;
 
     //==============================================================================
     void paint (juce::Graphics&) override;
@@ -63,13 +63,13 @@ public:
 private:
     // This reference is provided as a quick way for your editor to
     // access the processor object that created it.
-    AnimalBeatAudioProcessor& audioProcessor;
+    SampleAudioProcessor& audioProcessor;
 
-    static constexpr int NUM_ANIMALS = 4;
+    static constexpr int NUM_SAMPLES = 5;
     static constexpr int NUM_BEATS = 2;
 
-    std::array<juce::TextButton, NUM_ANIMALS> loadAnimalButtons;
-    std::array<juce::TextButton, NUM_ANIMALS> playAnimalButtons;
+    std::array<juce::TextButton, NUM_SAMPLES> loadSampleButtons;
+    std::array<juce::TextButton, NUM_SAMPLES> playSampleButtons;
 
 
     std::array<juce::TextButton, NUM_BEATS> loadBeatButtons;
@@ -89,20 +89,20 @@ private:
 
     int currentStep = 0;
 
-    juce::TextButton filterToggleButtons[NUM_ANIMALS];
-    juce::Slider filterCutoffSliders[NUM_ANIMALS];
+    juce::TextButton filterToggleButtons[NUM_SAMPLES];
+    juce::Slider filterCutoffSliders[NUM_SAMPLES];
 
-    std::array<juce::TextButton, NUM_ANIMALS> highpassToggleButtons;
-    std::array<juce::Slider, NUM_ANIMALS> highpassCutoffSliders;
-
-
-    std::array<juce::TextButton, NUM_ANIMALS> bandpassToggleButtons;
-    std::array<juce::Slider, NUM_ANIMALS> bandpassCutoffSliders;
-    std::array<juce::Slider, NUM_ANIMALS> bandpassBandwidthSliders;
+    std::array<juce::TextButton, NUM_SAMPLES> highpassToggleButtons;
+    std::array<juce::Slider, NUM_SAMPLES> highpassCutoffSliders;
 
 
+    std::array<juce::TextButton, NUM_SAMPLES> bandpassToggleButtons;
+    std::array<juce::Slider, NUM_SAMPLES> bandpassCutoffSliders;
+    std::array<juce::Slider, NUM_SAMPLES> bandpassBandwidthSliders;
 
 
 
-    JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (AnimalBeatAudioProcessorEditor)
+
+
+    JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (SampleAudioProcessorEditor)
 };

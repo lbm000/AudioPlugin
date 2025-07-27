@@ -8,12 +8,12 @@
 #include <juce_dsp/juce_dsp.h>
 
 //==============================================================================
-class AnimalBeatAudioProcessor  : public juce::AudioProcessor
+class SampleAudioProcessor  : public juce::AudioProcessor
 {
 public:
     //==============================================================================
-    AnimalBeatAudioProcessor();
-    ~AnimalBeatAudioProcessor() override;
+    SampleAudioProcessor();
+    ~SampleAudioProcessor() override;
 
     //==============================================================================
     void prepareToPlay (double sampleRate, int samplesPerBlock) override;
@@ -50,16 +50,14 @@ public:
     //===================================
 
 
-    void loadAnimalFile(const juce::File& file, int index);
+    void loadSampleFile(const juce::File& file, int index);
     void loadBeatFile(const juce::File& file, int index);
 
     void setGlobalBpm(float newBpm);
     float getGlobalBpm() const { return globalBpm; }
-    static constexpr int NUM_ANIMALS = 4;
-    static constexpr int NUM_BEATS = 2;
+    static constexpr int NUM_SAMPLES = 5;
 
-    std::array<bool, NUM_ANIMALS> isAnimalPlaying {};
-    std::array<bool, NUM_BEATS> isBeatPlaying {};
+    std::array<bool, NUM_SAMPLES> isSamplePlaying {};
 
     int getCurrentStep() const { return currentStep; }
 
@@ -91,26 +89,6 @@ public:
     void setBandPassBandwidth(int index, float value);
     float getBandPassBandwidth(int index) const;
 
-    bool getBeatFilterEnabled(int index) const { return beatFilterEnabled[index]; }
-    void setBeatFilterEnabled(int index, bool b) { beatFilterEnabled[index] = b; }
-
-    float getBeatFilterCutoff(int index) const { return beatFilterCutoff[index]; }
-    void setBeatFilterCutoff(int index, float f) { beatFilterCutoff[index] = f; }
-
-    bool getBeatHighpassEnabled(int index) const { return beatHighpassEnabled[index]; }
-    void setBeatHighpassEnabled(int index, bool b) { beatHighpassEnabled[index] = b; }
-
-    float getBeatHighpassCutoff(int index) const { return beatHighpassCutoff[index]; }
-    void setBeatHighpassCutoff(int index, float f) { beatHighpassCutoff[index] = f; }
-
-    bool getBeatBandPassEnabled(int index) const { return beatBandPassEnabled[index]; }
-    void setBeatBandPassEnabled(int index, bool b) { beatBandPassEnabled[index] = b; }
-
-    float getBeatBandPassCutoff(int index) const { return beatBandPassCutoff[index]; }
-    void setBeatBandPassCutoff(int index, float f) { beatBandPassCutoff[index] = f; }
-
-    float getBeatBandPassBandwidth(int index) const { return beatBandPassBandwidth[index]; }
-    void setBeatBandPassBandwidth(int index, float f) { beatBandPassBandwidth[index] = f; }
 
 
 
@@ -118,15 +96,11 @@ private:
     juce::AudioFormatManager formatManager;
 
     // Buffers and internal control
-    std::array<juce::AudioBuffer<float>, NUM_ANIMALS> animalBuffers;
-    std::array<int, NUM_ANIMALS> animalReadPositions {};
-    std::array<bool, NUM_ANIMALS> isAnimalFileLoaded {};
-    std::array<int, NUM_ANIMALS> animalSampleCounters {};
+    std::array<juce::AudioBuffer<float>, NUM_SAMPLES> sampleBuffers;
+    std::array<int, NUM_SAMPLES> sampleReadPositions {};
+    std::array<bool, NUM_SAMPLES> isSampleFileLoaded {};
+    std::array<int, NUM_SAMPLES> SampleCounters {};
 
-    std::array<juce::AudioBuffer<float>, NUM_BEATS> beatBuffers;
-    std::array<int, NUM_BEATS> beatReadPositions {};
-    std::array<bool, NUM_BEATS> isBeatFileLoaded {};
-    std::array<int, NUM_BEATS> beatSampleCounters {};
 
     float globalBpm = 120.0f;
     int globalSamplesPerBeat = 0;
@@ -139,33 +113,26 @@ private:
 
 
     // filter low pass
-    std::array<juce::dsp::StateVariableTPTFilter<float>, NUM_ANIMALS> animalFilters;
-    std::array<bool, NUM_ANIMALS> isFilterEnabled {};
-    std::array<float, NUM_ANIMALS> cutoffFrequencies {};
+    std::array<juce::dsp::StateVariableTPTFilter<float>, NUM_SAMPLES> sampleFilters;
+    std::array<bool, NUM_SAMPLES> isFilterEnabled {};
+    std::array<float, NUM_SAMPLES> cutoffFrequencies {};
 
     // filter high pass
-    std::array<juce::dsp::StateVariableTPTFilter<float>, NUM_ANIMALS> animalHighPassFilters;
-    std::array<bool, NUM_ANIMALS> isHighPassEnabled {};
-    std::array<float, NUM_ANIMALS> highPassCutoffFrequencies {};
+    std::array<juce::dsp::StateVariableTPTFilter<float>, NUM_SAMPLES> sampleHighPassFilters;
+    std::array<bool, NUM_SAMPLES> isHighPassEnabled {};
+    std::array<float, NUM_SAMPLES> highPassCutoffFrequencies {};
 
     // filter band pass
-    std::array<juce::dsp::StateVariableTPTFilter<float>, NUM_ANIMALS> animalBandPassFilters;
-    std::array<bool, NUM_ANIMALS> isBandPassEnabled {};
-    std::array<float, NUM_ANIMALS> bandPassCutoffs;
-    std::array<float, NUM_ANIMALS> bandPassBandwidths;
+    std::array<juce::dsp::StateVariableTPTFilter<float>, NUM_SAMPLES> sampleBandPassFilters;
+    std::array<bool, NUM_SAMPLES> isBandPassEnabled {};
+    std::array<float, NUM_SAMPLES> bandPassCutoffs;
+    std::array<float, NUM_SAMPLES> bandPassBandwidths;
 
-    std::array<bool, NUM_BEATS> beatFilterEnabled;
-    std::array<float, NUM_BEATS> beatFilterCutoff;
 
-    std::array<bool, NUM_BEATS> beatHighpassEnabled;
-    std::array<float, NUM_BEATS> beatHighpassCutoff;
 
-    std::array<bool, NUM_BEATS> beatBandPassEnabled;
-    std::array<float, NUM_BEATS> beatBandPassCutoff;
-    std::array<float, NUM_BEATS> beatBandPassBandwidth;
 
 
     //==============================================================================
-    JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (AnimalBeatAudioProcessor)
+    JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (SampleAudioProcessor)
 };
 
