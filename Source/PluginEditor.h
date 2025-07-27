@@ -101,6 +101,10 @@ private:
     std::array<juce::Slider, NUM_SAMPLES> bandpassBandwidthSliders;
 
 
+    std::array<juce::TextButton, NUM_SAMPLES> notchToggleButtons;
+    std::array<juce::Slider, NUM_SAMPLES> notchCutoffSliders;
+    std::array<juce::Slider, NUM_SAMPLES> notchBandwidthSliders;
+
 
 
 

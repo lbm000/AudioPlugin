@@ -50,6 +50,9 @@ SampleAudioProcessorEditor::SampleAudioProcessorEditor (SampleAudioProcessor& p)
         audioProcessor.setFilterEnabled(i, isOn);
         filterToggleButtons[i].setColour(juce::TextButton::buttonColourId,
             isOn ? juce::Colours::green : juce::Colours::darkgrey);
+
+
+        bandpassToggleButtons[i].setColour(juce::TextButton::buttonColourId, juce::Colours::darkgrey);
     };
     filterToggleButtons[i].setColour(juce::TextButton::buttonColourId, juce::Colours::darkgrey);
     addAndMakeVisible(filterToggleButtons[i]);
@@ -70,6 +73,8 @@ SampleAudioProcessorEditor::SampleAudioProcessorEditor (SampleAudioProcessor& p)
         audioProcessor.setHighpassEnabled(i, isOn);
         highpassToggleButtons[i].setColour(juce::TextButton::buttonColourId,
             isOn ? juce::Colours::green : juce::Colours::darkgrey);
+
+        bandpassToggleButtons[i].setColour(juce::TextButton::buttonColourId, juce::Colours::darkgrey);
     };
     highpassToggleButtons[i].setColour(juce::TextButton::buttonColourId, juce::Colours::darkgrey);
     addAndMakeVisible(highpassToggleButtons[i]);
@@ -87,15 +92,17 @@ SampleAudioProcessorEditor::SampleAudioProcessorEditor (SampleAudioProcessor& p)
     // Band-Pass Filter toggle
     bandpassToggleButtons[i].setButtonText("BPF " + juce::String(i + 1));
     bandpassToggleButtons[i].onClick = [this, i]() {
-        bool isOn = audioProcessor.getBandPassEnabled(i);
+        bool isOn = !audioProcessor.getBandPassEnabled(i);  // <- inverter o estado
         audioProcessor.setBandPassEnabled(i, isOn);
 
         if (isOn) {
-            // Deactivate LPF and HPF
             audioProcessor.setFilterEnabled(i, false);
             audioProcessor.setHighpassEnabled(i, false);
+            audioProcessor.setNotchEnabled(i, false); // Desativa Notch também
+
             filterToggleButtons[i].setColour(juce::TextButton::buttonColourId, juce::Colours::darkgrey);
             highpassToggleButtons[i].setColour(juce::TextButton::buttonColourId, juce::Colours::darkgrey);
+            notchToggleButtons[i].setColour(juce::TextButton::buttonColourId, juce::Colours::darkgrey);
         }
 
         bandpassToggleButtons[i].setColour(juce::TextButton::buttonColourId,
@@ -122,6 +129,49 @@ SampleAudioProcessorEditor::SampleAudioProcessorEditor (SampleAudioProcessor& p)
         audioProcessor.setBandPassBandwidth(i, bandpassBandwidthSliders[i].getValue());
     };
     addAndMakeVisible(bandpassBandwidthSliders[i]);
+
+
+    // Notch Filter Toggle
+    notchToggleButtons[i].setButtonText("Notch " + juce::String(i + 1));
+    notchToggleButtons[i].onClick = [this, i]() {
+        bool isOn = !audioProcessor.getNotchEnabled(i);
+        audioProcessor.setNotchEnabled(i, isOn);
+
+        if (isOn)
+        {
+            // Deactivate other filters
+            audioProcessor.setFilterEnabled(i, false);
+            audioProcessor.setHighpassEnabled(i, false);
+            audioProcessor.setBandPassEnabled(i, false);
+
+            filterToggleButtons[i].setColour(juce::TextButton::buttonColourId, juce::Colours::darkgrey);
+            highpassToggleButtons[i].setColour(juce::TextButton::buttonColourId, juce::Colours::darkgrey);
+            bandpassToggleButtons[i].setColour(juce::TextButton::buttonColourId, juce::Colours::darkgrey);
+        }
+
+        notchToggleButtons[i].setColour(juce::TextButton::buttonColourId,
+            isOn ? juce::Colours::aqua : juce::Colours::darkgrey);
+    };
+    notchToggleButtons[i].setColour(juce::TextButton::buttonColourId, juce::Colours::darkgrey);
+    addAndMakeVisible(notchToggleButtons[i]);
+
+    // Notch Filter Cutoff Slider
+    notchCutoffSliders[i].setRange(100.0, 10000.0, 1.0);
+    notchCutoffSliders[i].setValue(1000.0);
+    notchCutoffSliders[i].setTextBoxStyle(juce::Slider::TextBoxRight, false, 60, 20);
+    notchCutoffSliders[i].onValueChange = [this, i]() {
+        audioProcessor.setNotchCutoff(i, notchCutoffSliders[i].getValue());
+    };
+    addAndMakeVisible(notchCutoffSliders[i]);
+
+    // Notch Bandwidth Slider
+    notchBandwidthSliders[i].setRange(10.0, 5000.0, 1.0);
+    notchBandwidthSliders[i].setValue(100.0);
+    notchBandwidthSliders[i].setTextBoxStyle(juce::Slider::TextBoxRight, false, 60, 20);
+    notchBandwidthSliders[i].onValueChange = [this, i]() {
+        audioProcessor.setNotchBandwidth(i, notchBandwidthSliders[i].getValue());
+    };
+    addAndMakeVisible(notchBandwidthSliders[i]);
 }
 
 
@@ -197,18 +247,18 @@ void SampleAudioProcessorEditor::paint (juce::Graphics& g)
 {
     g.fillAll (getLookAndFeel().findColour (juce::ResizableWindow::backgroundColourId));
 
-    // Parâmetros consistentes com o resized()
+
     const int stepSize = 25;
     const int stepStartX = 480;
     const int rowHeight = 35;
 
-    // Altura baseada na altura dos controles
-    const int baseY = 45 + NUM_SAMPLES * (30 + 40);  // 30 e 40 são as duas linhas por sample
+
+    const int baseY = 45 + NUM_SAMPLES * (30 + 40);
     const int stepYStart = baseY + 20;
 
     const int x = stepStartX + audioProcessor.getCurrentStep() * stepSize;
 
-    // Desenha a coluna amarela
+
     g.setColour(juce::Colours::yellow.withAlpha(0.3f));
     g.fillRect(x, stepYStart + 20, stepSize, NUM_TRACKS * rowHeight);
 }
@@ -237,6 +287,9 @@ void SampleAudioProcessorEditor::resized()
         bandpassToggleButtons[i].setBounds(10, y, 50, 25);
         bandpassCutoffSliders[i].setBounds(70, y, 120, 25);
         bandpassBandwidthSliders[i].setBounds(200, y, 120, 25);
+        notchToggleButtons[i].setBounds(330, y, 60, 25);
+        notchCutoffSliders[i].setBounds(400, y, 120, 25);
+        notchBandwidthSliders[i].setBounds(530, y, 120, 25);
 
         y += 40;
     }

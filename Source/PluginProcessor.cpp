@@ -124,6 +124,7 @@ void SampleAudioProcessor::prepareToPlay(double sampleRate, int samplesPerBlock)
         sampleHighPassFilters[i].setCutoffFrequency(hpfCutoff);
     }
 
+
     // Band-pass filter
     for (int i = 0; i < NUM_SAMPLES; ++i)
     {
@@ -137,6 +138,19 @@ void SampleAudioProcessor::prepareToPlay(double sampleRate, int samplesPerBlock)
 
         sampleBandPassFilters[i].setCutoffFrequency(cutoff);
         sampleBandPassFilters[i].setResonance(q);
+    }
+
+    for (int i = 0; i < NUM_SAMPLES; ++i)
+    {
+        sampleNotchFilters[i].reset();
+        sampleNotchFilters[i].prepare({ sampleRate, static_cast<juce::uint32>(samplesPerBlock), 1 });
+
+        float cutoff = notchCutoffs[i] > 0.0f ? notchCutoffs[i] : 1000.0f;
+        float bandwidth = notchBandwidths[i] > 1.0f ? notchBandwidths[i] : 100.0f;
+        float q = cutoff / bandwidth;
+
+        auto coeffs = juce::dsp::IIR::Coefficients<float>::makeNotch(sampleRate, cutoff, q);
+        *sampleNotchFilters[i].coefficients = *coeffs;
     }
 
 }
@@ -211,11 +225,22 @@ void SampleAudioProcessor::processBlock(juce::AudioBuffer<float>& buffer, juce::
                     float inSample = sampleBuffers[i]
                         .getReadPointer(channel % sampleBuffers[i].getNumChannels())[sampleReadPositions[i]];
 
+                    if (isNotchEnabled[i])
+                    {
+                        float cutoff = notchCutoffs[i] > 0.0f ? notchCutoffs[i] : 1000.0f;
+                        float bandwidth = notchBandwidths[i] > 1.0f ? notchBandwidths[i] : 100.0f;
+                        float q = cutoff / bandwidth;
 
-                    if (isBandPassEnabled[i])
+                        auto coeffs = juce::dsp::IIR::Coefficients<float>::makeNotch(getSampleRate(), cutoff, q);
+                        *sampleNotchFilters[i].coefficients = *coeffs;
+
+                        inSample = sampleNotchFilters[i].processSample(inSample);
+                    }
+
+                    else if (isBandPassEnabled[i])
                     {
                         float cutoff = bandPassCutoffs[i] > 0.0f ? bandPassCutoffs[i] : 1000.0f;
-                        float bandwidth = bandPassBandwidths[i] > 0.0f ? bandPassBandwidths[i] : 500.0f;
+                        float bandwidth = bandPassBandwidths[i] > 1.0f ? bandPassBandwidths[i] : 1.0f;
                         float q = cutoff / bandwidth;
 
                         sampleBandPassFilters[i].setCutoffFrequency(cutoff);
@@ -335,7 +360,12 @@ void SampleAudioProcessor::setGlobalBpm(float newBpm)
 void SampleAudioProcessor::setFilterEnabled(int index, bool enabled)
 {
     if (index >= 0 && index < NUM_SAMPLES)
+    {
         isFilterEnabled[index] = enabled;
+
+        if (enabled)
+            isBandPassEnabled[index] = false;
+    }
 }
 
 void SampleAudioProcessor::setFilterCutoff(int index, float cutoffHz)
@@ -356,7 +386,13 @@ bool SampleAudioProcessor::getHighpassEnabled(int index) const
 
 void SampleAudioProcessor::setHighpassEnabled(int index, bool enabled)
 {
-    isHighPassEnabled[index] = enabled;
+    if (index >= 0 && index < NUM_SAMPLES)
+    {
+        isHighPassEnabled[index] = enabled;
+
+        if (enabled)
+            isBandPassEnabled[index] = false;
+    }
 }
 
 float SampleAudioProcessor::getHighpassCutoff(int index) const
@@ -404,3 +440,33 @@ void SampleAudioProcessor::setBandPassBandwidth(int index, float value) {
 float SampleAudioProcessor::getBandPassBandwidth(int index) const {
     return bandPassBandwidths[index];
 }
+
+bool SampleAudioProcessor::getNotchEnabled(int index) const
+{
+    return isNotchEnabled[index];
+}
+
+void SampleAudioProcessor::setNotchEnabled(int index, bool enabled)
+{
+    isNotchEnabled[index] = enabled;
+
+    if (enabled)
+    {
+        isFilterEnabled[index] = false;
+        isHighPassEnabled[index] = false;
+        isBandPassEnabled[index] = false;
+    }
+}
+
+void SampleAudioProcessor::setNotchCutoff(int index, float value)
+{
+    if (index >= 0 && index < NUM_SAMPLES)
+        notchCutoffs[index] = value;
+}
+
+void SampleAudioProcessor::setNotchBandwidth(int index, float value)
+{
+    if (index >= 0 && index < NUM_SAMPLES)
+        notchBandwidths[index] = value;
+}
+

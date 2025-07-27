@@ -89,6 +89,11 @@ public:
     void setBandPassBandwidth(int index, float value);
     float getBandPassBandwidth(int index) const;
 
+    void setNotchEnabled(int index, bool enabled);
+    bool getNotchEnabled(int index) const;
+    void setNotchCutoff(int index, float value);
+    void setNotchBandwidth(int index, float value);
+
 
 
 
@@ -127,6 +132,12 @@ private:
     std::array<bool, NUM_SAMPLES> isBandPassEnabled {};
     std::array<float, NUM_SAMPLES> bandPassCutoffs;
     std::array<float, NUM_SAMPLES> bandPassBandwidths;
+
+    // Notch Filter
+    std::array<juce::dsp::IIR::Filter<float>, NUM_SAMPLES> sampleNotchFilters;
+    std::array<bool, NUM_SAMPLES> isNotchEnabled {};
+    std::array<float, NUM_SAMPLES> notchCutoffs {};
+    std::array<float, NUM_SAMPLES> notchBandwidths {};
 
 
 
