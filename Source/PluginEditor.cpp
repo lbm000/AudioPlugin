@@ -1,3 +1,8 @@
+
+
+
+
+
 /*
   ==============================================================================
 
@@ -77,6 +82,46 @@ AnimalBeatAudioProcessorEditor::AnimalBeatAudioProcessorEditor (AnimalBeatAudioP
         audioProcessor.setHighpassCutoff(i, highpassCutoffSliders[i].getValue());
     };
     addAndMakeVisible(highpassCutoffSliders[i]);
+
+
+    // Band-Pass Filter toggle
+    bandpassToggleButtons[i].setButtonText("BPF " + juce::String(i + 1));
+    bandpassToggleButtons[i].onClick = [this, i]() {
+        bool isOn = audioProcessor.getBandPassEnabled(i);
+        audioProcessor.setBandPassEnabled(i, isOn);
+
+        if (isOn) {
+            // Deactivate LPF and HPF
+            audioProcessor.setFilterEnabled(i, false);
+            audioProcessor.setHighpassEnabled(i, false);
+            filterToggleButtons[i].setColour(juce::TextButton::buttonColourId, juce::Colours::darkgrey);
+            highpassToggleButtons[i].setColour(juce::TextButton::buttonColourId, juce::Colours::darkgrey);
+        }
+
+        bandpassToggleButtons[i].setColour(juce::TextButton::buttonColourId,
+            isOn ? juce::Colours::orange : juce::Colours::darkgrey);
+    };
+    bandpassToggleButtons[i].setColour(juce::TextButton::buttonColourId, juce::Colours::darkgrey);
+    addAndMakeVisible(bandpassToggleButtons[i]);
+
+
+    // Band-Pass Filter Cutoff
+    bandpassCutoffSliders[i].setRange(100.0, 10000.0, 1.0);
+    bandpassCutoffSliders[i].setValue(1000.0);
+    bandpassCutoffSliders[i].setTextBoxStyle(juce::Slider::TextBoxRight, false, 60, 20);
+    bandpassCutoffSliders[i].onValueChange = [this, i]() {
+        audioProcessor.setBandPassCutoff(i, bandpassCutoffSliders[i].getValue());
+    };
+    addAndMakeVisible(bandpassCutoffSliders[i]);
+
+    // Bandwidth
+    bandpassBandwidthSliders[i].setRange(10.0, 5000.0, 1.0);
+    bandpassBandwidthSliders[i].setValue(1000.0);
+    bandpassBandwidthSliders[i].setTextBoxStyle(juce::Slider::TextBoxRight, false, 60, 20);
+    bandpassBandwidthSliders[i].onValueChange = [this, i]() {
+        audioProcessor.setBandPassBandwidth(i, bandpassBandwidthSliders[i].getValue());
+    };
+    addAndMakeVisible(bandpassBandwidthSliders[i]);
 }
 
     for (int i = 0; i < NUM_BEATS; ++i)
@@ -183,7 +228,7 @@ void AnimalBeatAudioProcessorEditor::paint (juce::Graphics& g)
     int stepSize = 25;
     int buttonSize = 20;
     int stepStartX = 480;
-    int stepYStart = 250;
+    int stepYStart = 45 + NUM_ANIMALS * 70 + NUM_BEATS * 35 + 20;
     int rowHeight = 35;
 
     int x = stepStartX + audioProcessor.getCurrentStep() * stepSize;
@@ -200,20 +245,25 @@ void AnimalBeatAudioProcessorEditor::resized()
 
     int y = 45;
 
-
     for (int i = 0; i < NUM_ANIMALS; ++i)
     {
+        // Linha 1: Load, Play, LPF, LPF-Cutoff, HPF, HPF-Cutoff
         loadAnimalButtons[i].setBounds(10, y, 140, 25);
         playAnimalButtons[i].setBounds(160, y, 120, 25);
         filterToggleButtons[i].setBounds(290, y, 50, 25);
         filterCutoffSliders[i].setBounds(350, y, 120, 25);
-
         highpassToggleButtons[i].setBounds(480, y, 50, 25);
         highpassCutoffSliders[i].setBounds(540, y, 120, 25);
 
-        y += 35;
-    }
+        y += 30;
 
+        // Linha 2: BPF toggle, BPF cutoff, BPF bandwidth
+        bandpassToggleButtons[i].setBounds(10, y, 50, 25);
+        bandpassCutoffSliders[i].setBounds(70, y, 120, 25);
+        bandpassBandwidthSliders[i].setBounds(200, y, 120, 25);
+
+        y += 40; // espaço após cada animal
+    }
 
     for (int i = 0; i < NUM_BEATS; ++i)
     {
@@ -223,7 +273,7 @@ void AnimalBeatAudioProcessorEditor::resized()
     }
 
 
-    int stepYStart = 250;
+    int stepYStart = y + 20;
     int rowHeight = 35;
     int stepSize = 25;
     int buttonSize = 20;
@@ -242,13 +292,11 @@ void AnimalBeatAudioProcessorEditor::resized()
         }
     }
 
-
     int groupX = stepStartX - 10;
     int groupY = stepYStart;
     int groupWidth = NUM_STEPS * stepSize + 20;
-    int groupHeight = stepYStart + NUM_TRACKS * rowHeight + 30;
+    int groupHeight = NUM_TRACKS * rowHeight + 30;
     stepSequencerGroup.setBounds(groupX, groupY, groupWidth, groupHeight);
-
 
     int labelY = groupY + 10;
     for (int step = 0; step < NUM_STEPS; ++step)
@@ -261,13 +309,13 @@ void AnimalBeatAudioProcessorEditor::resized()
         );
     }
 
-
     setSize(stepStartX + NUM_STEPS * stepSize + 30, stepYStart + NUM_TRACKS * rowHeight + 60);
 }
+
+
 
 void AnimalBeatAudioProcessorEditor::timerCallback()
 {
     currentStep = audioProcessor.getCurrentStep();
     repaint();
 }
-

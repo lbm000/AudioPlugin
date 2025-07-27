@@ -1,3 +1,4 @@
+
 /*
   ==============================================================================
 
@@ -124,6 +125,22 @@ void AnimalBeatAudioProcessor::prepareToPlay(double sampleRate, int samplesPerBl
         float hpfCutoff = highPassCutoffFrequencies[i] > 0.0f ? highPassCutoffFrequencies[i] : 1000.0f;
         animalHighPassFilters[i].setCutoffFrequency(hpfCutoff);
     }
+
+    // Band-pass filter
+    for (int i = 0; i < NUM_ANIMALS; ++i)
+    {
+        animalBandPassFilters[i].reset();
+        animalBandPassFilters[i].prepare({ sampleRate, static_cast<juce::uint32>(samplesPerBlock), 1 });
+        animalBandPassFilters[i].setType(juce::dsp::StateVariableTPTFilterType::bandpass);
+
+        float cutoff = bandPassCutoffs[i] > 0.0f ? bandPassCutoffs[i] : 1000.0f;
+        float bandwidth = bandPassBandwidths[i] > 0.0f ? bandPassBandwidths[i] : 500.0f;
+        float q = cutoff / bandwidth;
+
+        animalBandPassFilters[i].setCutoffFrequency(cutoff);
+        animalBandPassFilters[i].setResonance(q);
+    }
+
 }
 
 
@@ -206,11 +223,27 @@ void AnimalBeatAudioProcessor::processBlock(juce::AudioBuffer<float>& buffer, ju
                         .getReadPointer(channel % animalBuffers[i].getNumChannels())[animalReadPositions[i]];
 
 
-                    if (isFilterEnabled[i])
-                        inSample = animalFilters[i].processSample(0, inSample);
+                    if (isBandPassEnabled[i])
+                    {
+                        float cutoff = bandPassCutoffs[i] > 0.0f ? bandPassCutoffs[i] : 1000.0f;
+                        float bandwidth = bandPassBandwidths[i] > 0.0f ? bandPassBandwidths[i] : 500.0f;
+                        float q = cutoff / bandwidth;
 
-                    if (isHighPassEnabled[i])
-                        inSample = animalHighPassFilters[i].processSample(0, inSample);
+                        animalBandPassFilters[i].setCutoffFrequency(cutoff);
+                        animalBandPassFilters[i].setResonance(q);
+
+                        inSample = animalBandPassFilters[i].processSample(0, inSample);
+                    }
+
+                    else
+                    {
+                        if (isHighPassEnabled[i])
+                            inSample = animalHighPassFilters[i].processSample(0, inSample);
+
+                        if (isFilterEnabled[i])
+                            inSample = animalFilters[i].processSample(0, inSample);
+                    }
+
 
                     outSample += inSample;
                 }
@@ -267,10 +300,6 @@ void AnimalBeatAudioProcessor::processBlock(juce::AudioBuffer<float>& buffer, ju
             beatReadPositions[i] = 0;
     }
 }
-
-
-
-
 
 
 //==============================================================================
@@ -394,6 +423,37 @@ void AnimalBeatAudioProcessor::setHighpassCutoff(int index, float cutoff)
     animalHighPassFilters[index].setCutoffFrequency(cutoff);
 }
 
+bool AnimalBeatAudioProcessor::getBandPassEnabled(int index) const
+{
+    return isBandPassEnabled[index];
+}
 
+void AnimalBeatAudioProcessor::setBandPassEnabled(int index, bool enabled)
+{
+    isBandPassEnabled[index] = enabled;
 
+    if (enabled)
+    {
 
+        isFilterEnabled[index] = false;
+        isHighPassEnabled[index] = false;
+    }
+}
+
+void AnimalBeatAudioProcessor::setBandPassCutoff(int index, float value) {
+    if (index >= 0 && index < NUM_ANIMALS)
+        bandPassCutoffs[index] = value;
+}
+
+float AnimalBeatAudioProcessor::getBandPassCutoff(int index) const {
+    return bandPassCutoffs[index];
+}
+
+void AnimalBeatAudioProcessor::setBandPassBandwidth(int index, float value) {
+    if (index >= 0 && index < NUM_ANIMALS)
+        bandPassBandwidths[index] = value;
+}
+
+float AnimalBeatAudioProcessor::getBandPassBandwidth(int index) const {
+    return bandPassBandwidths[index];
+}

@@ -96,11 +96,13 @@ private:
     std::array<juce::Slider, NUM_ANIMALS> highpassCutoffSliders;
 
 
+    std::array<juce::TextButton, NUM_ANIMALS> bandpassToggleButtons;
+    std::array<juce::Slider, NUM_ANIMALS> bandpassCutoffSliders;
+    std::array<juce::Slider, NUM_ANIMALS> bandpassBandwidthSliders;
+
+
 
 
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (AnimalBeatAudioProcessorEditor)
 };
-
-
-
