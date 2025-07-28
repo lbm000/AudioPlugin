@@ -172,6 +172,53 @@ SampleAudioProcessorEditor::SampleAudioProcessorEditor (SampleAudioProcessor& p)
         audioProcessor.setNotchBandwidth(i, notchBandwidthSliders[i].getValue());
     };
     addAndMakeVisible(notchBandwidthSliders[i]);
+
+    // Peak Filter Toggle
+    peakToggleButtons[i].setButtonText("Peak " + juce::String(i + 1));
+    peakToggleButtons[i].onClick = [this, i]() {
+        bool isOn = !audioProcessor.getPeakEnabled(i);
+        audioProcessor.setPeakEnabled(i, isOn);
+
+        if (isOn)
+        {
+            // Desativar BandPass se Peak for ativado
+            audioProcessor.setBandPassEnabled(i, false);
+            bandpassToggleButtons[i].setColour(juce::TextButton::buttonColourId, juce::Colours::darkgrey);
+        }
+
+        peakToggleButtons[i].setColour(juce::TextButton::buttonColourId,
+            isOn ? juce::Colours::yellow : juce::Colours::darkgrey);
+    };
+    peakToggleButtons[i].setColour(juce::TextButton::buttonColourId, juce::Colours::darkgrey);
+    addAndMakeVisible(peakToggleButtons[i]);
+
+    // Peak Filter Cutoff
+    peakCutoffSliders[i].setRange(100.0, 10000.0, 1.0);
+    peakCutoffSliders[i].setValue(1000.0);
+    peakCutoffSliders[i].setTextBoxStyle(juce::Slider::TextBoxRight, false, 60, 20);
+    peakCutoffSliders[i].onValueChange = [this, i]() {
+        audioProcessor.setPeakCutoff(i, peakCutoffSliders[i].getValue());
+    };
+    addAndMakeVisible(peakCutoffSliders[i]);
+
+    // Peak Gain Slider (em dB)
+    peakGainSliders[i].setRange(-24.0, 24.0, 0.1);
+    peakGainSliders[i].setValue(0.0);
+    peakGainSliders[i].setTextBoxStyle(juce::Slider::TextBoxRight, false, 60, 20);
+    peakGainSliders[i].onValueChange = [this, i]() {
+        audioProcessor.setPeakGain(i, peakGainSliders[i].getValue());
+    };
+    addAndMakeVisible(peakGainSliders[i]);
+
+    // Peak Q Slider (largura)
+    peakQSliders[i].setRange(0.1, 10.0, 0.1);
+    peakQSliders[i].setValue(1.0);
+    peakQSliders[i].setTextBoxStyle(juce::Slider::TextBoxRight, false, 60, 20);
+    peakQSliders[i].onValueChange = [this, i]() {
+        audioProcessor.setPeakQ(i, peakQSliders[i].getValue());
+    };
+        addAndMakeVisible(peakQSliders[i]);
+
 }
 
 
@@ -245,23 +292,17 @@ SampleAudioProcessorEditor::~SampleAudioProcessorEditor()
 //==============================================================================
 void SampleAudioProcessorEditor::paint (juce::Graphics& g)
 {
-    g.fillAll (getLookAndFeel().findColour (juce::ResizableWindow::backgroundColourId));
-
+    g.fillAll(getLookAndFeel().findColour(juce::ResizableWindow::backgroundColourId));
 
     const int stepSize = 25;
-    const int stepStartX = 480;
     const int rowHeight = 35;
 
-
-    const int baseY = 45 + NUM_SAMPLES * (30 + 40);
-    const int stepYStart = baseY + 20;
-
     const int x = stepStartX + audioProcessor.getCurrentStep() * stepSize;
-
 
     g.setColour(juce::Colours::yellow.withAlpha(0.3f));
     g.fillRect(x, stepYStart + 20, stepSize, NUM_TRACKS * rowHeight);
 }
+
 
 
 void SampleAudioProcessorEditor::resized()
@@ -287,9 +328,15 @@ void SampleAudioProcessorEditor::resized()
         bandpassToggleButtons[i].setBounds(10, y, 50, 25);
         bandpassCutoffSliders[i].setBounds(70, y, 120, 25);
         bandpassBandwidthSliders[i].setBounds(200, y, 120, 25);
+        y += 30;
         notchToggleButtons[i].setBounds(330, y, 60, 25);
         notchCutoffSliders[i].setBounds(400, y, 120, 25);
         notchBandwidthSliders[i].setBounds(530, y, 120, 25);
+        y += 30;
+        peakToggleButtons[i].setBounds(10, y, 60, 25);
+        peakCutoffSliders[i].setBounds(80, y, 120, 25);
+        peakGainSliders[i].setBounds(210, y, 120, 25);
+        peakQSliders[i].setBounds(340, y, 120, 25);
 
         y += 40;
     }
@@ -297,7 +344,7 @@ void SampleAudioProcessorEditor::resized()
 
 
 
-    int stepYStart = y + 20;
+    stepYStart = y + 20;
     int rowHeight = 35;
     int stepSize = 25;
     int buttonSize = 20;
@@ -332,8 +379,10 @@ void SampleAudioProcessorEditor::resized()
             15
         );
     }
+    setSize(stepStartX + NUM_STEPS * stepSize + 30, y + NUM_TRACKS * rowHeight + 60);
 
-    setSize(stepStartX + NUM_STEPS * stepSize + 30, stepYStart + NUM_TRACKS * rowHeight + 60);
+
+
 }
 
 

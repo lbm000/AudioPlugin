@@ -153,6 +153,19 @@ void SampleAudioProcessor::prepareToPlay(double sampleRate, int samplesPerBlock)
         *sampleNotchFilters[i].coefficients = *coeffs;
     }
 
+    for (int i = 0; i < NUM_SAMPLES; ++i)
+    {
+        samplePeakFilters[i].reset();
+        samplePeakFilters[i].prepare({ sampleRate, static_cast<juce::uint32>(samplesPerBlock), 1 });
+
+        float cutoff = peakCutoffs[i] > 0.0f ? peakCutoffs[i] : 1000.0f;
+        float gain = peakGains[i]; // em dB
+        float q = peakQs[i] > 0.0f ? peakQs[i] : 1.0f;
+
+        auto coeffs = juce::dsp::IIR::Coefficients<float>::makePeakFilter(sampleRate, cutoff, q, juce::Decibels::decibelsToGain(gain));
+        *samplePeakFilters[i].coefficients = *coeffs;
+    }
+
 }
 
 
@@ -249,6 +262,17 @@ void SampleAudioProcessor::processBlock(juce::AudioBuffer<float>& buffer, juce::
                         inSample = sampleBandPassFilters[i].processSample(0, inSample);
                     }
 
+                    else if (isPeakEnabled[i])
+                    {
+                        float cutoff = peakCutoffs[i] > 0.0f ? peakCutoffs[i] : 1000.0f;
+                        float gain = peakGains[i];
+                        float q = peakQs[i] > 0.0f ? peakQs[i] : 1.0f;
+
+                        auto coeffs = juce::dsp::IIR::Coefficients<float>::makePeakFilter(getSampleRate(), cutoff, q, juce::Decibels::decibelsToGain(gain));
+                        *samplePeakFilters[i].coefficients = *coeffs;
+
+                        inSample = samplePeakFilters[i].processSample(inSample);
+                    }
                     else
                     {
                         if (isHighPassEnabled[i])
@@ -469,4 +493,39 @@ void SampleAudioProcessor::setNotchBandwidth(int index, float value)
     if (index >= 0 && index < NUM_SAMPLES)
         notchBandwidths[index] = value;
 }
+
+bool SampleAudioProcessor::getPeakEnabled(int index) const
+{
+    return isPeakEnabled[index];
+}
+
+void SampleAudioProcessor::setPeakEnabled(int index, bool enabled)
+{
+    isPeakEnabled[index] = enabled;
+
+    if (enabled)
+    {
+        isBandPassEnabled[index] = false;
+        // Se quiser, desative Notch aqui também
+    }
+}
+
+void SampleAudioProcessor::setPeakCutoff(int index, float value)
+{
+    if (index >= 0 && index < NUM_SAMPLES)
+        peakCutoffs[index] = value;
+}
+
+void SampleAudioProcessor::setPeakGain(int index, float value)
+{
+    if (index >= 0 && index < NUM_SAMPLES)
+        peakGains[index] = value;
+}
+
+void SampleAudioProcessor::setPeakQ(int index, float value)
+{
+    if (index >= 0 && index < NUM_SAMPLES)
+        peakQs[index] = value;
+}
+
 

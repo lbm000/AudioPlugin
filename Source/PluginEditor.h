@@ -105,6 +105,13 @@ private:
     std::array<juce::Slider, NUM_SAMPLES> notchCutoffSliders;
     std::array<juce::Slider, NUM_SAMPLES> notchBandwidthSliders;
 
+    std::array<juce::TextButton, NUM_SAMPLES> peakToggleButtons;
+    std::array<juce::Slider, NUM_SAMPLES> peakCutoffSliders;
+    std::array<juce::Slider, NUM_SAMPLES> peakGainSliders;
+    std::array<juce::Slider, NUM_SAMPLES> peakQSliders;
+
+    int stepYStart = 0;
+    int stepStartX = 480;
 
 
 

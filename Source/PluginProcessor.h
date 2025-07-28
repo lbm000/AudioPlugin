@@ -94,6 +94,16 @@ public:
     void setNotchCutoff(int index, float value);
     void setNotchBandwidth(int index, float value);
 
+    bool getPeakEnabled(int index) const;
+    void setPeakEnabled(int index, bool enabled);
+
+    void setPeakCutoff(int index, float value);
+    void setPeakGain(int index, float value);
+    void setPeakQ(int index, float value);
+
+
+
+
 
 
 
@@ -139,6 +149,12 @@ private:
     std::array<float, NUM_SAMPLES> notchCutoffs {};
     std::array<float, NUM_SAMPLES> notchBandwidths {};
 
+    // peak filter
+    std::array<juce::dsp::IIR::Filter<float>, NUM_SAMPLES> samplePeakFilters;
+    std::array<bool, NUM_SAMPLES> isPeakEnabled;
+    std::array<float, NUM_SAMPLES> peakCutoffs;
+    std::array<float, NUM_SAMPLES> peakGains;
+    std::array<float, NUM_SAMPLES> peakQs;
 
 
 
