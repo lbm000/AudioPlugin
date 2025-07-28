@@ -16,47 +16,39 @@ class CustomLookAndFeel : public juce::LookAndFeel_V4
 public:
     CustomLookAndFeel()
     {
-        // Define uma cor padrão para os botões "ligados"
         setColour(juce::TextButton::buttonOnColourId, juce::Colours::deepskyblue);
     }
 
-    // A mágica para desenhar os knobs bonitos e funcionais
     void drawRotarySlider(juce::Graphics& g, int x, int y, int width, int height, float sliderPos,
                           const float rotaryStartAngle, const float rotaryEndAngle, juce::Slider& slider) override
     {
-        // 1. CONFIGURAÇÕES GERAIS E GEOMETRIA
         auto bounds = juce::Rectangle<float>(x, y, width, height).reduced(10);
         auto radius = juce::jmin(bounds.getWidth(), bounds.getHeight()) / 2.0f;
         auto centreX = bounds.getCentreX();
         auto centreY = bounds.getCentreY();
         auto angle = rotaryStartAngle + sliderPos * (rotaryEndAngle - rotaryStartAngle);
 
-        // Paleta de Cores
         auto knobBodyColour = juce::Colour(0xff333333);
         auto arcColour = slider.isMouseOverOrDragging() ? juce::Colours::deepskyblue.brighter() : juce::Colours::deepskyblue;
         auto pointerColour = juce::Colours::whitesmoke;
         auto shadowColour = juce::Colours::black.withAlpha(0.4f);
 
-        // 2. DESENHANDO A SOMBRA
         auto shadowBounds = bounds.translated(1.0f, 2.0f);
         g.setColour(shadowColour);
         g.fillEllipse(shadowBounds);
 
-        // 3. DESENHANDO O CORPO DO KNOB
         juce::ColourGradient gradient(knobBodyColour.brighter(0.1f), bounds.getTopLeft(), knobBodyColour.darker(0.1f), bounds.getBottomLeft(), false);
         g.setGradientFill(gradient);
         g.fillEllipse(bounds);
         g.setColour(juce::Colours::black.withAlpha(0.8f));
         g.drawEllipse(bounds, 1.5f);
 
-        // 4. DESENHANDO O ARCO DE VALOR
         juce::Path valueArc;
         float arcThickness = 0.15f;
         valueArc.addPieSegment(bounds, rotaryStartAngle, angle, 1.0f - arcThickness);
         g.setColour(arcColour);
         g.fillPath(valueArc);
 
-        // 5. DESENHANDO O PONTEIRO INDICADOR
         juce::Path p;
         auto pointerLength = radius * 0.9f;
         auto pointerThickness = 3.0f;
@@ -68,7 +60,6 @@ public:
         g.setColour(knobBodyColour.brighter(0.2f));
         g.fillEllipse(centreX - 4, centreY - 4, 8, 8);
 
-        // 6. DESENHANDO MARCAS/TICKS
         g.setColour(juce::Colours::grey);
         for (int i = 0; i < 11; ++i)
         {
@@ -131,6 +122,7 @@ public:
 
 
 
+
 private:
     // This reference is provided as a quick way for your editor to
     // access the processor object that created it.
@@ -187,6 +179,12 @@ private:
     CustomLookAndFeel customLookAndFeel;
     void handleFilterToggleLogic(int i, juce::TextButton& clickedButton);
     void setupToggleButton(juce::TextButton& button, const juce::String& text);
+
+    std::array<juce::TextButton, NUM_SAMPLES> bitcrusherToggleButtons;
+    std::array<juce::Slider, NUM_SAMPLES> bitDepthSliders;
+    std::array<juce::Slider, NUM_SAMPLES> downsampleRateSliders;
+
+    std::array<juce::Slider, NUM_SAMPLES> gainSliders;
 
 
 

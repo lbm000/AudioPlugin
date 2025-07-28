@@ -101,8 +101,12 @@ public:
     void setPeakGain(int index, float value);
     void setPeakQ(int index, float value);
 
+    void setBitcrusherEnabled(int index, bool enabled);
+    void setBitDepth(int index, int depth);
+    void setDownsampleRate(int index, float rate);
 
-
+    void setGainLevel(int index, float gain);
+    float getGainLevel(int index) const;
 
 
 
@@ -155,6 +159,16 @@ private:
     std::array<float, NUM_SAMPLES> peakCutoffs;
     std::array<float, NUM_SAMPLES> peakGains;
     std::array<float, NUM_SAMPLES> peakQs;
+
+    // Bitcrusher
+    std::array<bool, NUM_SAMPLES> isBitcrusherEnabled {};
+    std::array<int, NUM_SAMPLES> bitDepths {};
+    std::array<float, NUM_SAMPLES> downsampleRates {};
+    std::array<int, NUM_SAMPLES> downsampleCounters {};
+
+    // gain
+    std::array<float, NUM_SAMPLES> gainLevels { 1.0f };
+
 
 
 

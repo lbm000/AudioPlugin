@@ -150,7 +150,7 @@ void SampleAudioProcessor::prepareToPlay(double sampleRate, int samplesPerBlock)
         samplePeakFilters[i].prepare({ sampleRate, static_cast<juce::uint32>(samplesPerBlock), 1 });
 
         float cutoff = peakCutoffs[i] > 0.0f ? peakCutoffs[i] : 1000.0f;
-        float gain = peakGains[i]; // em dB
+        float gain = peakGains[i]; //
         float q = peakQs[i] > 0.0f ? peakQs[i] : 1.0f;
 
         auto coeffs = juce::dsp::IIR::Coefficients<float>::makePeakFilter(sampleRate, cutoff, q, juce::Decibels::decibelsToGain(gain));
@@ -273,7 +273,22 @@ void SampleAudioProcessor::processBlock(juce::AudioBuffer<float>& buffer, juce::
                             inSample = sampleFilters[i].processSample(0, inSample);
                     }
 
+                    if (isBitcrusherEnabled[i])
+                    {
+                        int& counter = downsampleCounters[i];
+                        int downsampleFactor = std::max(1, static_cast<int>(downsampleRates[i]));
 
+                        if (counter == 0)
+                        {
+                            int bitDepth = std::clamp(bitDepths[i], 1, 24);
+                            float maxVal = static_cast<float>((1 << bitDepth) - 1);
+                            inSample = std::round(inSample * maxVal) / maxVal;
+                        }
+
+                        counter = (counter + 1) % downsampleFactor;
+                    }
+
+                    inSample *= gainLevels[i];
                     outSample += inSample;
                 }
             }
@@ -497,7 +512,6 @@ void SampleAudioProcessor::setPeakEnabled(int index, bool enabled)
     if (enabled)
     {
         isBandPassEnabled[index] = false;
-        // Se quiser, desative Notch aqui também
     }
 }
 
@@ -518,5 +532,37 @@ void SampleAudioProcessor::setPeakQ(int index, float value)
     if (index >= 0 && index < NUM_SAMPLES)
         peakQs[index] = value;
 }
+
+
+void SampleAudioProcessor::setBitcrusherEnabled(int index, bool enabled)
+{
+    isBitcrusherEnabled[index] = enabled;
+}
+
+void SampleAudioProcessor::setBitDepth(int index, int depth)
+{
+    bitDepths[index] = depth;
+}
+
+void SampleAudioProcessor::setDownsampleRate(int index, float rate)
+{
+    downsampleRates[index] = rate;
+}
+
+void SampleAudioProcessor::setGainLevel(int index, float gain)
+{
+    if (index >= 0 && index < NUM_SAMPLES)
+        gainLevels[index] = gain;
+}
+
+float SampleAudioProcessor::getGainLevel(int index) const
+{
+    return (index >= 0 && index < NUM_SAMPLES) ? gainLevels[index] : 1.0f;
+}
+
+
+
+
+
 
 
