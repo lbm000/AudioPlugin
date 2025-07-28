@@ -1,11 +1,3 @@
-/*
-==============================================================================
-
-    This file contains the basic framework code for a JUCE plugin editor.
-
-  ==============================================================================
-*/
-
 #pragma once
 
 #include <juce_audio_processors/juce_audio_processors.h>
@@ -19,6 +11,77 @@
 static constexpr int NUM_TRACKS = SampleAudioProcessor::NUM_SAMPLES;
 static constexpr int NUM_STEPS = 16;
 
+class CustomLookAndFeel : public juce::LookAndFeel_V4
+{
+public:
+    CustomLookAndFeel()
+    {
+        // Define uma cor padrão para os botões "ligados"
+        setColour(juce::TextButton::buttonOnColourId, juce::Colours::deepskyblue);
+    }
+
+    // A mágica para desenhar os knobs bonitos e funcionais
+    void drawRotarySlider(juce::Graphics& g, int x, int y, int width, int height, float sliderPos,
+                          const float rotaryStartAngle, const float rotaryEndAngle, juce::Slider& slider) override
+    {
+        // 1. CONFIGURAÇÕES GERAIS E GEOMETRIA
+        auto bounds = juce::Rectangle<float>(x, y, width, height).reduced(10);
+        auto radius = juce::jmin(bounds.getWidth(), bounds.getHeight()) / 2.0f;
+        auto centreX = bounds.getCentreX();
+        auto centreY = bounds.getCentreY();
+        auto angle = rotaryStartAngle + sliderPos * (rotaryEndAngle - rotaryStartAngle);
+
+        // Paleta de Cores
+        auto knobBodyColour = juce::Colour(0xff333333);
+        auto arcColour = slider.isMouseOverOrDragging() ? juce::Colours::deepskyblue.brighter() : juce::Colours::deepskyblue;
+        auto pointerColour = juce::Colours::whitesmoke;
+        auto shadowColour = juce::Colours::black.withAlpha(0.4f);
+
+        // 2. DESENHANDO A SOMBRA
+        auto shadowBounds = bounds.translated(1.0f, 2.0f);
+        g.setColour(shadowColour);
+        g.fillEllipse(shadowBounds);
+
+        // 3. DESENHANDO O CORPO DO KNOB
+        juce::ColourGradient gradient(knobBodyColour.brighter(0.1f), bounds.getTopLeft(), knobBodyColour.darker(0.1f), bounds.getBottomLeft(), false);
+        g.setGradientFill(gradient);
+        g.fillEllipse(bounds);
+        g.setColour(juce::Colours::black.withAlpha(0.8f));
+        g.drawEllipse(bounds, 1.5f);
+
+        // 4. DESENHANDO O ARCO DE VALOR
+        juce::Path valueArc;
+        float arcThickness = 0.15f;
+        valueArc.addPieSegment(bounds, rotaryStartAngle, angle, 1.0f - arcThickness);
+        g.setColour(arcColour);
+        g.fillPath(valueArc);
+
+        // 5. DESENHANDO O PONTEIRO INDICADOR
+        juce::Path p;
+        auto pointerLength = radius * 0.9f;
+        auto pointerThickness = 3.0f;
+        p.addRectangle(-pointerThickness * 0.5f, -radius, pointerThickness, pointerLength);
+        p.applyTransform(juce::AffineTransform::rotation(angle).translated(centreX, centreY));
+        g.setColour(pointerColour);
+        g.fillPath(p);
+
+        g.setColour(knobBodyColour.brighter(0.2f));
+        g.fillEllipse(centreX - 4, centreY - 4, 8, 8);
+
+        // 6. DESENHANDO MARCAS/TICKS
+        g.setColour(juce::Colours::grey);
+        for (int i = 0; i < 11; ++i)
+        {
+            float proportion = i / 10.0f;
+            float tickAngle = rotaryStartAngle + proportion * (rotaryEndAngle - rotaryStartAngle);
+            juce::Path tick;
+            tick.addRectangle(0.0f, -radius * 1.05f, 1.5f, radius * 0.1f);
+            tick.applyTransform(juce::AffineTransform::rotation(tickAngle).translated(centreX, centreY));
+            g.fillPath(tick);
+        }
+    }
+};
+
 
 class StepButton : public juce::Button
 {
@@ -28,16 +91,23 @@ public:
     void paintButton(juce::Graphics& g, bool shouldDrawButtonAsHighlighted, bool shouldDrawButtonAsDown) override
     {
         auto bounds = getLocalBounds().toFloat();
+        auto cornerSize = 4.0f;
 
+        auto baseColour = getToggleState() ? juce::Colours::orange : juce::Colours::darkgrey.darker();
+        if (shouldDrawButtonAsDown)
+            baseColour = baseColour.darker();
 
-        auto bgColour = getToggleState() ? juce::Colours::white : findColour(juce::ResizableWindow::backgroundColourId);
-        auto borderColour = juce::Colours::white;
+        g.setColour(baseColour);
+        g.fillRoundedRectangle(bounds, cornerSize);
 
-        g.setColour(bgColour);
-        g.fillRect(bounds);
+        if (getToggleState())
+        {
+            g.setGradientFill(juce::ColourGradient(juce::Colours::white.withAlpha(0.3f), bounds.getCentre(), juce::Colours::white.withAlpha(0.0f), bounds.getBottomRight(), false));
+            g.fillRoundedRectangle(bounds.reduced(1.0f), cornerSize);
+        }
 
-        g.setColour(borderColour);
-        g.drawRect(bounds, 1.0f);
+        g.setColour(juce::Colours::black.withAlpha(0.8f));
+        g.drawRoundedRectangle(bounds, cornerSize, 1.5f);
     }
 
 
@@ -58,6 +128,7 @@ public:
     void paint (juce::Graphics&) override;
     void resized() override;
     void timerCallback() override;
+
 
 
 private:
@@ -112,6 +183,10 @@ private:
 
     int stepYStart = 0;
     int stepStartX = 480;
+
+    CustomLookAndFeel customLookAndFeel;
+    void handleFilterToggleLogic(int i, juce::TextButton& clickedButton);
+    void setupToggleButton(juce::TextButton& button, const juce::String& text);
 
 
 
