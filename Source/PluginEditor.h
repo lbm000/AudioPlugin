@@ -105,6 +105,17 @@ public:
 };
 
 
+class StepHighlightOverlay : public juce::Component
+{
+public:
+    void paint(juce::Graphics& g) override
+    {
+        g.setColour(juce::Colours::yellow.withAlpha(0.3f));
+        g.fillRect(getLocalBounds());
+    }
+};
+
+
 //==============================================================================
 /**
 */
@@ -186,7 +197,17 @@ private:
 
     std::array<juce::Slider, NUM_SAMPLES> gainSliders;
 
+    std::array<juce::Slider, NUM_SAMPLES> attackSliders;
+    std::array<juce::Slider, NUM_SAMPLES> decaySliders;
+    std::array<juce::Slider, NUM_SAMPLES> sustainSliders;
+    std::array<juce::Slider, NUM_SAMPLES> releaseSliders;
 
+    std::array<juce::Label, NUM_SAMPLES> gainLabels;
+    std::array<juce::Label, NUM_SAMPLES * 4> adsrLabels;
+
+    std::array<juce::GroupComponent, NUM_SAMPLES> sampleControlGroups;
+    StepHighlightOverlay stepHighlightOverlay;
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (SampleAudioProcessorEditor)
 };
+

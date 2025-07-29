@@ -19,8 +19,14 @@ SampleAudioProcessorEditor::SampleAudioProcessorEditor (SampleAudioProcessor& p)
 
     for (int i = 0; i < NUM_SAMPLES; ++i)
     {
+
+        sampleControlGroups[i].setText("Sample " + juce::String(i + 1));
+        sampleControlGroups[i].setColour(juce::GroupComponent::outlineColourId, juce::Colours::grey);
+        sampleControlGroups[i].setColour(juce::GroupComponent::textColourId, juce::Colours::whitesmoke);
+        addAndMakeVisible(sampleControlGroups[i]);
+
         // --- LOAD / PLAY ---
-        loadSampleButtons[i].setButtonText("Load " + juce::String(i + 1));
+        loadSampleButtons[i].setButtonText("Load" + juce::String(i + 1));
         loadSampleButtons[i].onClick = [this, i]()
         {
             fileChooser = std::make_unique<juce::FileChooser>("Select a Sample", juce::File{}, "*.wav");
@@ -35,7 +41,7 @@ SampleAudioProcessorEditor::SampleAudioProcessorEditor (SampleAudioProcessor& p)
         addAndMakeVisible(loadSampleButtons[i]);
 
         playSampleButtons[i].setClickingTogglesState(true);
-        playSampleButtons[i].setButtonText("▶");
+        playSampleButtons[i].setButtonText("play");
         playSampleButtons[i].setColour(juce::TextButton::buttonColourId, juce::Colours::darkgrey);
         addAndMakeVisible(playSampleButtons[i]);
 
@@ -43,7 +49,7 @@ SampleAudioProcessorEditor::SampleAudioProcessorEditor (SampleAudioProcessor& p)
         {
             bool isPlaying = playSampleButtons[i].getToggleState();
 
-            playSampleButtons[i].setButtonText(isPlaying ? "■" : "▶");
+            playSampleButtons[i].setButtonText(isPlaying ? "pause" : "play");
             playSampleButtons[i].setColour(juce::TextButton::buttonColourId,
                                            isPlaying ? juce::Colours::green : juce::Colours::darkgrey);
 
@@ -133,10 +139,57 @@ SampleAudioProcessorEditor::SampleAudioProcessorEditor (SampleAudioProcessor& p)
         gainSliders[i].setRange(0.0f, 2.0f, 0.01f);
         gainSliders[i].setValue(1.0f);
         addAndMakeVisible(gainSliders[i]);
+        gainLabels[i].setText("Gain", juce::dontSendNotification);
+        gainLabels[i].setJustificationType(juce::Justification::centred);
+        gainLabels[i].setColour(juce::Label::textColourId, juce::Colours::whitesmoke);
+        addAndMakeVisible(gainLabels[i]);
+
 
         gainSliders[i].onValueChange = [this, i]() {
             audioProcessor.setGainLevel(i, (float)gainSliders[i].getValue());
         };
+
+        // --- ADSR ---
+        configureAsKnob(attackSliders[i], "A");
+        attackSliders[i].setRange(0.001, 5.0, 0.001);
+        addAndMakeVisible(attackSliders[i]);
+        attackSliders[i].onValueChange = [this, i]() {
+            audioProcessor.setAdsrAttack(i, attackSliders[i].getValue());
+        };
+
+        configureAsKnob(decaySliders[i], "D");
+        decaySliders[i].setRange(0.001, 5.0, 0.001);
+        addAndMakeVisible(decaySliders[i]);
+        decaySliders[i].onValueChange = [this, i]() {
+            audioProcessor.setAdsrDecay(i, decaySliders[i].getValue());
+        };
+
+        configureAsKnob(sustainSliders[i], "S");
+        sustainSliders[i].setRange(0.0, 1.0, 0.01);
+        addAndMakeVisible(sustainSliders[i]);
+        sustainSliders[i].onValueChange = [this, i]() {
+            audioProcessor.setAdsrSustain(i, sustainSliders[i].getValue());
+        };
+
+        configureAsKnob(releaseSliders[i], "R");
+        releaseSliders[i].setRange(0.001, 5.0, 0.001);
+        addAndMakeVisible(releaseSliders[i]);
+        int adsrBaseIndex = i * 4;
+        const char* adsrNames[] = { "A", "D", "S", "R" };
+
+        for (int j = 0; j < 4; ++j)
+        {
+            adsrLabels[adsrBaseIndex + j].setText(adsrNames[j], juce::dontSendNotification);
+            adsrLabels[adsrBaseIndex + j].setJustificationType(juce::Justification::centred);
+            adsrLabels[adsrBaseIndex + j].setColour(juce::Label::textColourId, juce::Colours::whitesmoke);
+            addAndMakeVisible(adsrLabels[adsrBaseIndex + j]);
+        }
+
+        releaseSliders[i].onValueChange = [this, i]() {
+            audioProcessor.setAdsrRelease(i, releaseSliders[i].getValue());
+        };
+
+
 
         configureAsKnob(downsampleRateSliders[i], "x");
         downsampleRateSliders[i].setRange(1, 50, 1);
@@ -219,17 +272,21 @@ SampleAudioProcessorEditor::SampleAudioProcessorEditor (SampleAudioProcessor& p)
     globalBpmLabel.setJustificationType(juce::Justification::centred);
     addAndMakeVisible(globalBpmLabel);
 
-    configureAsKnob(globalBpmSlider);
+    globalBpmSlider.setSliderStyle(juce::Slider::LinearVertical);
+    globalBpmSlider.setTextBoxStyle(juce::Slider::TextBoxBelow, true, 80, 20);
+    globalBpmSlider.setNumDecimalPlacesToDisplay(0);
     globalBpmSlider.setRange(1.0, 300.0, 1.0);
     globalBpmSlider.setValue(audioProcessor.getGlobalBpm());
     globalBpmSlider.onValueChange = [this]() {
         audioProcessor.setGlobalBpm(globalBpmSlider.getValue());
     };
     addAndMakeVisible(globalBpmSlider);
+    addAndMakeVisible(stepHighlightOverlay);
+    stepHighlightOverlay.toFront(true);
 
     startTimerHz(10);
 
-    setSize(1800, 700);
+    setSize(1800, 1000);
 }
 
 
@@ -241,17 +298,25 @@ SampleAudioProcessorEditor::~SampleAudioProcessorEditor()
 //==============================================================================
 void SampleAudioProcessorEditor::paint (juce::Graphics& g)
 {
-
     g.fillAll(getLookAndFeel().findColour(juce::ResizableWindow::backgroundColourId));
 
-    const int stepSize = 25;
-    const int rowHeight = 35;
+    if (stepSequencerGroup.isVisible())
+    {
+        auto sequencerArea = stepSequencerGroup.getBounds();
+        auto sequencerContentBounds = sequencerArea.reduced(10);
+        auto labelHeight = 20;
+        sequencerContentBounds.removeFromTop(labelHeight);
 
-    const int x = stepStartX + audioProcessor.getCurrentStep() * stepSize;
-    const int y = stepYStart;
+        int stepWidth = sequencerContentBounds.getWidth() / NUM_STEPS;
+        int trackHeight = sequencerContentBounds.getHeight() / NUM_TRACKS;
 
-    g.setColour(juce::Colours::yellow.withAlpha(0.3f));
-    g.fillRect(x, y, stepSize, NUM_TRACKS * rowHeight);
+        auto absX = sequencerContentBounds.getX() + (currentStep * stepWidth);
+        auto absY = sequencerContentBounds.getY();
+
+        g.setColour(juce::Colours::yellow.withAlpha(0.8f));
+        g.fillRect(absX, absY, stepWidth, NUM_TRACKS * trackHeight);
+    }
+
 }
 
 
@@ -260,90 +325,120 @@ void SampleAudioProcessorEditor::resized()
 {
     auto bounds = getLocalBounds().reduced(10);
 
-
-    int sequencerWidth = NUM_STEPS * 25 + 40;
-
-    int totalWidth = getWidth();
-    int minSequencerWidth = 600;
-    int maxControlsWidth = totalWidth - minSequencerWidth;
-
-    int controlsWidth = juce::jmin(150 + 6 * 240, maxControlsWidth);
-    auto controlsArea = bounds.removeFromLeft(controlsWidth);
-    auto sequencerArea = bounds;
+    int knobSize = 60;
+    int spacing = 5;
+    int stepSeqHeight = 200;
+    int rightColumnWidth = 120;
 
 
-    stepSequencerGroup.setBounds(sequencerArea);
+    auto topArea = bounds.removeFromTop(stepSeqHeight);
 
-    int buttonSize = 20;
-    int stepSize = 25;
-    int rowHeight = 35;
-    int groupBorder = 15;
+    int bpmWidth = 120;
+    auto bpmArea = topArea.removeFromRight(bpmWidth);
+    auto stepSequencerArea = topArea;
 
-    stepStartX = stepSequencerGroup.getX() + groupBorder;
-    stepYStart = stepSequencerGroup.getY() + groupBorder + 20;
+    stepSequencerGroup.setBounds(stepSequencerArea);
+    globalBpmLabel.setBounds(bpmArea.removeFromTop(20).withTrimmedLeft(10));
+    globalBpmSlider.setBounds(bpmArea.withTrimmedLeft(10).withSizeKeepingCentre(60, 100));
 
 
-    auto sequencerContent = sequencerArea.reduced(groupBorder);
+    auto sequencerContentBounds = stepSequencerGroup.getBounds().reduced(10);    auto labelsArea = sequencerContentBounds.removeFromTop(20);
 
-    auto labelsArea = sequencerContent.removeFromTop(20);
+    int stepWidth = labelsArea.getWidth() / NUM_STEPS;
+    int trackHeight = (sequencerContentBounds.getHeight()) / NUM_TRACKS;
+
     for (int step = 0; step < NUM_STEPS; ++step)
     {
-        stepLabels[step].setBounds(labelsArea.removeFromLeft(stepSize));
+        stepLabels[step].setBounds(labelsArea.getX() + step * stepWidth,
+                                   labelsArea.getY(),
+                                   stepWidth,
+                                   labelsArea.getHeight());
     }
 
-    for (int i = 0; i < NUM_TRACKS; ++i)
+    for (int track = 0; track < NUM_TRACKS; ++track)
     {
-        auto trackArea = sequencerContent.removeFromTop(rowHeight);
         for (int step = 0; step < NUM_STEPS; ++step)
         {
-            stepButtons[i][step].setBounds(trackArea.removeFromLeft(stepSize).withSizeKeepingCentre(buttonSize, buttonSize));
+            auto x = sequencerContentBounds.getX() + step * stepWidth;
+            auto y = sequencerContentBounds.getY() + track * trackHeight;
+            stepButtons[track][step].setBounds(x, y, stepWidth, trackHeight);
         }
     }
+    stepHighlightOverlay.setBounds(0, 0, 0, 0);
+    addAndMakeVisible(stepHighlightOverlay);
 
-
-
-    auto globalArea = controlsArea.removeFromTop(100);
-    auto bpmArea = globalArea.removeFromLeft(100);
-
-    globalBpmLabel.setBounds(bpmArea.removeFromTop(20));
-    globalBpmSlider.setBounds(bpmArea);
-
-
-    int trackControlHeight = 120;
+    auto controlsArea = bounds;
+    int groupHeight = controlsArea.getHeight() / NUM_SAMPLES;
 
     for (int i = 0; i < NUM_SAMPLES; ++i)
     {
-        auto trackBounds = controlsArea.removeFromTop(trackControlHeight);
+        // here i put the space at the right side of group with withTrimmedRight
+        auto groupBounds = controlsArea.removeFromTop(groupHeight).withTrimmedRight(500).withTrimmedTop(5).withTrimmedBottom(5);
+        sampleControlGroups[i].setBounds(groupBounds);
 
+        auto contentArea = groupBounds.reduced(10);
 
-        auto createKnobSection = [&](juce::TextButton& toggle, juce::Slider& knob1, juce::Slider* knob2 = nullptr, juce::Slider* knob3 = nullptr)
+        auto sampleControlsLeft = contentArea.removeFromLeft(knobSize * 2 + spacing * 2);
+        sampleControlsLeft.removeFromTop(15);
+        loadSampleButtons[i].setBounds(sampleControlsLeft.removeFromTop(30).withSizeKeepingCentre(knobSize, 25));
+        sampleControlsLeft.removeFromTop(spacing);
+        playSampleButtons[i].setBounds(sampleControlsLeft.removeFromTop(30).withSizeKeepingCentre(knobSize, 25));
+
+        contentArea.removeFromLeft(spacing);
+        auto gainArea = contentArea.removeFromLeft(knobSize);
+        gainLabels[i].setBounds(gainArea.removeFromTop(20));
+        gainSliders[i].setBounds(gainArea);
+        contentArea.removeFromLeft(spacing * 2);
+
+        auto filtersAndBitcrusherArea = contentArea.removeFromLeft(knobSize * 9 + spacing * 8);
+
+        auto lpfArea = filtersAndBitcrusherArea.removeFromLeft(knobSize + spacing);
+        filterToggleButtons[i].setBounds(lpfArea.removeFromTop(20));
+        filterCutoffSliders[i].setBounds(lpfArea);
+
+        auto hpfArea = filtersAndBitcrusherArea.removeFromLeft(knobSize + spacing);
+        highpassToggleButtons[i].setBounds(hpfArea.removeFromTop(20));
+        highpassCutoffSliders[i].setBounds(hpfArea);
+
+        auto bpfArea = filtersAndBitcrusherArea.removeFromLeft(knobSize * 2 + spacing);
+        bandpassToggleButtons[i].setBounds(bpfArea.removeFromTop(20));
+        bandpassCutoffSliders[i].setBounds(bpfArea.removeFromLeft(knobSize));
+        bandpassBandwidthSliders[i].setBounds(bpfArea);
+
+        auto notchArea = filtersAndBitcrusherArea.removeFromLeft(knobSize * 2 + spacing);
+        notchToggleButtons[i].setBounds(notchArea.removeFromTop(20));
+        notchCutoffSliders[i].setBounds(notchArea.removeFromLeft(knobSize));
+        notchBandwidthSliders[i].setBounds(notchArea);
+
+        auto peakArea = filtersAndBitcrusherArea.removeFromLeft(knobSize * 3 + spacing * 2);
+        peakToggleButtons[i].setBounds(peakArea.removeFromTop(20));
+        peakCutoffSliders[i].setBounds(peakArea.removeFromLeft(knobSize));
+        peakGainSliders[i].setBounds(peakArea.removeFromLeft(knobSize));
+        peakQSliders[i].setBounds(peakArea.removeFromLeft(knobSize));
+
+        auto bitcrusherArea = contentArea.removeFromLeft(knobSize * 2 + spacing);
+        bitcrusherToggleButtons[i].setBounds(bitcrusherArea.removeFromTop(20));
+        bitDepthSliders[i].setBounds(bitcrusherArea.removeFromLeft(knobSize));
+        downsampleRateSliders[i].setBounds(bitcrusherArea);
+        contentArea.removeFromLeft(spacing);
+
+        auto adsrArea = contentArea;
+        int adsrBaseIndex = i * 4;
+
+        for (int j = 0; j < 4; ++j)
         {
-            int sectionWidth = 80;
-            if (knob2) sectionWidth += 80;
-            if (knob3) sectionWidth += 80;
+            auto slot = adsrArea.removeFromLeft(knobSize);
+            adsrLabels[adsrBaseIndex + j].setBounds(slot.removeFromTop(20));
+            switch (j)
+            {
+            case 0: attackSliders[i].setBounds(slot); break;
+            case 1: decaySliders[i].setBounds(slot); break;
+            case 2: sustainSliders[i].setBounds(slot); break;
+            case 3: releaseSliders[i].setBounds(slot); break;
+            }
+            adsrArea.removeFromLeft(spacing);
+        }
 
-            auto section = trackBounds.removeFromLeft(sectionWidth);
-            toggle.setBounds(section.removeFromTop(25).reduced(5));
-            auto knobArea = section;
-
-            knob1.setBounds(knobArea.removeFromLeft(80));
-            if (knob2) knob2->setBounds(knobArea.removeFromLeft(80));
-            if (knob3) knob3->setBounds(knobArea.removeFromLeft(80));
-        };
-
-        auto sampleControls = trackBounds.removeFromLeft(150);
-        loadSampleButtons[i].setBounds(sampleControls.removeFromTop(30).reduced(5));
-        playSampleButtons[i].setBounds(sampleControls.removeFromTop(30).reduced(5));
-
-        createKnobSection(filterToggleButtons[i], filterCutoffSliders[i]);
-        createKnobSection(highpassToggleButtons[i], highpassCutoffSliders[i]);
-        createKnobSection(bandpassToggleButtons[i], bandpassCutoffSliders[i], &bandpassBandwidthSliders[i]);
-        createKnobSection(notchToggleButtons[i], notchCutoffSliders[i], &notchBandwidthSliders[i]);
-        createKnobSection(peakToggleButtons[i], peakCutoffSliders[i], &peakGainSliders[i], &peakQSliders[i]);
-        createKnobSection(bitcrusherToggleButtons[i], bitDepthSliders[i], &downsampleRateSliders[i]);
-
-        auto gainSection = trackBounds.removeFromLeft(80);
-        gainSliders[i].setBounds(gainSection.reduced(5));
     }
 }
 
@@ -351,8 +446,23 @@ void SampleAudioProcessorEditor::resized()
 void SampleAudioProcessorEditor::timerCallback()
 {
     currentStep = audioProcessor.getCurrentStep();
-    repaint();
+
+    auto sequencerArea = stepSequencerGroup.getBounds().reduced(10);
+    auto labelHeight = 20;
+    sequencerArea.removeFromTop(labelHeight);
+
+    int stepWidth = sequencerArea.getWidth() / NUM_STEPS;
+    int trackHeight = sequencerArea.getHeight() / NUM_TRACKS;
+
+    int x = sequencerArea.getX() + currentStep * stepWidth;
+    int y = sequencerArea.getY();
+    int width = stepWidth;
+    int height = NUM_TRACKS * trackHeight;
+
+    stepHighlightOverlay.setBounds(x, y, width, height);
+    stepHighlightOverlay.repaint();
 }
+
 
 void SampleAudioProcessorEditor::handleFilterToggleLogic(int i, juce::TextButton& clickedButton)
 {

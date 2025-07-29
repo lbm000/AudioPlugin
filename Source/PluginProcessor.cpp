@@ -157,6 +157,19 @@ void SampleAudioProcessor::prepareToPlay(double sampleRate, int samplesPerBlock)
         *samplePeakFilters[i].coefficients = *coeffs;
     }
 
+    for (int i = 0; i < NUM_SAMPLES; ++i)
+    {
+        adsrEnvelopes[i].setSampleRate(sampleRate);
+
+
+        adsrParams[i].attack  = 0.01f;
+        adsrParams[i].decay   = 0.1f;
+        adsrParams[i].sustain = 1.0f;
+        adsrParams[i].release = 0.1f;
+
+        adsrEnvelopes[i].setParameters(adsrParams[i]);
+    }
+
 }
 
 
@@ -209,7 +222,9 @@ void SampleAudioProcessor::processBlock(juce::AudioBuffer<float>& buffer, juce::
             if (isSampleFileLoaded[i] && isSamplePlaying[i] && stepStates[i][currentStep])
             {
                 if (sampleReadPositions[i] == 0)
-                    sampleReadPositions[i] = 0;
+                    adsrEnvelopes[i].noteOn();
+                else if (sampleReadPositions[i] >= sampleBuffers[i].getNumSamples())
+                    adsrEnvelopes[i].noteOff();
             }
         }
 
@@ -288,7 +303,9 @@ void SampleAudioProcessor::processBlock(juce::AudioBuffer<float>& buffer, juce::
                         counter = (counter + 1) % downsampleFactor;
                     }
 
-                    inSample *= gainLevels[i];
+                    // ADSR and gain
+                    float envelopeValue = adsrEnvelopes[i].getNextSample();
+                    inSample *= envelopeValue * gainLevels[i];
                     outSample += inSample;
                 }
             }
@@ -559,6 +576,63 @@ float SampleAudioProcessor::getGainLevel(int index) const
 {
     return (index >= 0 && index < NUM_SAMPLES) ? gainLevels[index] : 1.0f;
 }
+
+void SampleAudioProcessor::setAdsrAttack(int index, float value)
+{
+    if (index >= 0 && index < NUM_SAMPLES)
+    {
+        adsrParams[index].attack = value;
+        adsrEnvelopes[index].setParameters(adsrParams[index]);
+    }
+}
+
+void SampleAudioProcessor::setAdsrDecay(int index, float value)
+{
+    if (index >= 0 && index < NUM_SAMPLES)
+    {
+        adsrParams[index].decay = value;
+        adsrEnvelopes[index].setParameters(adsrParams[index]);
+    }
+}
+
+void SampleAudioProcessor::setAdsrSustain(int index, float value)
+{
+    if (index >= 0 && index < NUM_SAMPLES)
+    {
+        adsrParams[index].sustain = value;
+        adsrEnvelopes[index].setParameters(adsrParams[index]);
+    }
+}
+
+void SampleAudioProcessor::setAdsrRelease(int index, float value)
+{
+    if (index >= 0 && index < NUM_SAMPLES)
+    {
+        adsrParams[index].release = value;
+        adsrEnvelopes[index].setParameters(adsrParams[index]);
+    }
+}
+
+float SampleAudioProcessor::getAdsrAttack(int index) const
+{
+    return (index >= 0 && index < NUM_SAMPLES) ? adsrParams[index].attack : 0.0f;
+}
+
+float SampleAudioProcessor::getAdsrDecay(int index) const
+{
+    return (index >= 0 && index < NUM_SAMPLES) ? adsrParams[index].decay : 0.0f;
+}
+
+float SampleAudioProcessor::getAdsrSustain(int index) const
+{
+    return (index >= 0 && index < NUM_SAMPLES) ? adsrParams[index].sustain : 0.0f;
+}
+
+float SampleAudioProcessor::getAdsrRelease(int index) const
+{
+    return (index >= 0 && index < NUM_SAMPLES) ? adsrParams[index].release : 0.0f;
+}
+
 
 
 

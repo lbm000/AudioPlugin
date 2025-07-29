@@ -108,6 +108,16 @@ public:
     void setGainLevel(int index, float gain);
     float getGainLevel(int index) const;
 
+    void setAdsrAttack(int index, float value);
+    void setAdsrDecay(int index, float value);
+    void setAdsrSustain(int index, float value);
+    void setAdsrRelease(int index, float value);
+
+    float getAdsrAttack(int index) const;
+    float getAdsrDecay(int index) const;
+    float getAdsrSustain(int index) const;
+    float getAdsrRelease(int index) const;
+
 
 
 
@@ -168,6 +178,13 @@ private:
 
     // gain
     std::array<float, NUM_SAMPLES> gainLevels { 1.0f };
+
+    //adsr
+    juce::ADSR::Parameters adsrParams[NUM_SAMPLES];
+    juce::ADSR adsrEnvelopes[NUM_SAMPLES];
+
+
+
 
 
 
