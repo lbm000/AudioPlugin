@@ -90,9 +90,14 @@ SampleAudioProcessorEditor::SampleAudioProcessorEditor (SampleAudioProcessor& p)
 
 
         // --- Notch ---
+        // --- Notch ---
         setupToggleButton(notchToggleButtons[i], "Notch");
         configureAsKnob(notchCutoffSliders[i], "Hz");
+        notchCutoffSliders[i].setRange(20.0, 5000.0, 1.0);
+        notchCutoffSliders[i].setValue(1000.0);
         configureAsKnob(notchBandwidthSliders[i], "Hz");
+        notchBandwidthSliders[i].setRange(10.0, 1000.0, 1.0);
+        notchBandwidthSliders[i].setValue(100.0);
         addAndMakeVisible(notchCutoffSliders[i]);
         addAndMakeVisible(notchBandwidthSliders[i]);
         notchCutoffSliders[i].onValueChange = [this, i]() {
@@ -106,8 +111,11 @@ SampleAudioProcessorEditor::SampleAudioProcessorEditor (SampleAudioProcessor& p)
         // --- Peak ---
         setupToggleButton(peakToggleButtons[i], "Peak");
         configureAsKnob(peakCutoffSliders[i], "Hz");
+        peakCutoffSliders[i].setRange(20.0, 10000.0, 1.0);
         configureAsKnob(peakGainSliders[i], "dB");
+        peakGainSliders[i].setRange(-24.0, 24.0, 0.1);
         configureAsKnob(peakQSliders[i], "Q");
+        peakQSliders[i].setRange(0.1, 10.0, 0.1);
         addAndMakeVisible(peakCutoffSliders[i]);
         addAndMakeVisible(peakGainSliders[i]);
         addAndMakeVisible(peakQSliders[i]);

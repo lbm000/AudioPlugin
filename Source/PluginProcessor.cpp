@@ -136,13 +136,9 @@ void SampleAudioProcessor::prepareToPlay(double sampleRate, int samplesPerBlock)
         sampleNotchFilters[i].reset();
         sampleNotchFilters[i].prepare({ sampleRate, static_cast<juce::uint32>(samplesPerBlock), 1 });
 
-        float cutoff = notchCutoffs[i] > 0.0f ? notchCutoffs[i] : 1000.0f;
-        float bandwidth = notchBandwidths[i] > 1.0f ? notchBandwidths[i] : 100.0f;
-        float q = cutoff / bandwidth;
-
-        auto coeffs = juce::dsp::IIR::Coefficients<float>::makeNotch(sampleRate, cutoff, q);
-        *sampleNotchFilters[i].coefficients = *coeffs;
+        updateNotchCoefficients(i);
     }
+
 
     for (int i = 0; i < NUM_SAMPLES; ++i)
     {
@@ -246,13 +242,6 @@ void SampleAudioProcessor::processBlock(juce::AudioBuffer<float>& buffer, juce::
 
                     if (isNotchEnabled[i])
                     {
-                        float cutoff = notchCutoffs[i] > 0.0f ? notchCutoffs[i] : 1000.0f;
-                        float bandwidth = notchBandwidths[i] > 1.0f ? notchBandwidths[i] : 100.0f;
-                        float q = cutoff / bandwidth;
-
-                        auto coeffs = juce::dsp::IIR::Coefficients<float>::makeNotch(getSampleRate(), cutoff, q);
-                        *sampleNotchFilters[i].coefficients = *coeffs;
-
                         inSample = sampleNotchFilters[i].processSample(inSample);
                     }
 
@@ -508,13 +497,33 @@ void SampleAudioProcessor::setNotchEnabled(int index, bool enabled)
 void SampleAudioProcessor::setNotchCutoff(int index, float value)
 {
     if (index >= 0 && index < NUM_SAMPLES)
+    {
         notchCutoffs[index] = value;
+        updateNotchCoefficients(index);
+    }
 }
+
 
 void SampleAudioProcessor::setNotchBandwidth(int index, float value)
 {
     if (index >= 0 && index < NUM_SAMPLES)
+    {
         notchBandwidths[index] = value;
+        updateNotchCoefficients(index);
+    }
+}
+
+
+void SampleAudioProcessor::updateNotchCoefficients(int index)
+{
+    if (index < 0 || index >= NUM_SAMPLES) return;
+
+    float cutoff = notchCutoffs[index] > 0.0f ? notchCutoffs[index] : 1000.0f;
+    float bandwidth = notchBandwidths[index] > 1.0f ? notchBandwidths[index] : 100.0f;
+    float q = cutoff / bandwidth;
+
+    auto coeffs = juce::dsp::IIR::Coefficients<float>::makeNotch(getSampleRate(), cutoff, q);
+    *sampleNotchFilters[index].coefficients = *coeffs;
 }
 
 bool SampleAudioProcessor::getPeakEnabled(int index) const

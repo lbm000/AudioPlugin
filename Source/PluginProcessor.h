@@ -162,6 +162,7 @@ private:
     std::array<bool, NUM_SAMPLES> isNotchEnabled {};
     std::array<float, NUM_SAMPLES> notchCutoffs {};
     std::array<float, NUM_SAMPLES> notchBandwidths {};
+    void updateNotchCoefficients(int index);
 
     // peak filter
     std::array<juce::dsp::IIR::Filter<float>, NUM_SAMPLES> samplePeakFilters;
