@@ -11,6 +11,28 @@
 static constexpr int NUM_TRACKS = SampleAudioProcessor::NUM_SAMPLES;
 static constexpr int NUM_STEPS = 16;
 
+
+class ADSREditorComponent : public juce::Component
+{
+public:
+    ADSREditorComponent();
+
+    void setAdsr(double attack, double decay, double sustain, double release);
+
+    void paint(juce::Graphics& g) override;
+    void mouseDown(const juce::MouseEvent& e) override;
+    void mouseDrag(const juce::MouseEvent& e) override;
+
+    std::function<void(double attack, double decay, double sustain, double release)> onAdsrChanged;
+
+private:
+    double attack = 0.1, decay = 0.1, sustain = 0.8, release = 0.2;
+
+    bool draggingAttack = false, draggingDecay = false, draggingSustain = false, draggingRelease = false;
+
+    void drawHandle(juce::Graphics& g, float x, float y);
+};
+
 class CustomLookAndFeel : public juce::LookAndFeel_V4
 {
 public:
@@ -197,10 +219,7 @@ private:
 
     std::array<juce::Slider, NUM_SAMPLES> gainSliders;
 
-    std::array<juce::Slider, NUM_SAMPLES> attackSliders;
-    std::array<juce::Slider, NUM_SAMPLES> decaySliders;
-    std::array<juce::Slider, NUM_SAMPLES> sustainSliders;
-    std::array<juce::Slider, NUM_SAMPLES> releaseSliders;
+    std::array<std::unique_ptr<ADSREditorComponent>, NUM_SAMPLES> adsrEditors;
 
     std::array<juce::Label, NUM_SAMPLES> gainLabels;
     std::array<juce::Label, NUM_SAMPLES * 4> adsrLabels;
@@ -210,4 +229,9 @@ private:
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (SampleAudioProcessorEditor)
 };
+
+
+
+
+
 

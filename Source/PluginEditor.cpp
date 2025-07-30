@@ -157,45 +157,17 @@ SampleAudioProcessorEditor::SampleAudioProcessorEditor (SampleAudioProcessor& p)
             audioProcessor.setGainLevel(i, (float)gainSliders[i].getValue());
         };
 
-        // --- ADSR ---
-        configureAsKnob(attackSliders[i], "A");
-        attackSliders[i].setRange(0.001, 5.0, 0.001);
-        addAndMakeVisible(attackSliders[i]);
-        attackSliders[i].onValueChange = [this, i]() {
-            audioProcessor.setAdsrAttack(i, attackSliders[i].getValue());
-        };
+        adsrEditors[i] = std::make_unique<ADSREditorComponent>();
+        addAndMakeVisible(*adsrEditors[i]);
 
-        configureAsKnob(decaySliders[i], "D");
-        decaySliders[i].setRange(0.001, 5.0, 0.001);
-        addAndMakeVisible(decaySliders[i]);
-        decaySliders[i].onValueChange = [this, i]() {
-            audioProcessor.setAdsrDecay(i, decaySliders[i].getValue());
-        };
-
-        configureAsKnob(sustainSliders[i], "S");
-        sustainSliders[i].setRange(0.0, 1.0, 0.01);
-        addAndMakeVisible(sustainSliders[i]);
-        sustainSliders[i].onValueChange = [this, i]() {
-            audioProcessor.setAdsrSustain(i, sustainSliders[i].getValue());
-        };
-
-        configureAsKnob(releaseSliders[i], "R");
-        releaseSliders[i].setRange(0.001, 5.0, 0.001);
-        addAndMakeVisible(releaseSliders[i]);
-        int adsrBaseIndex = i * 4;
-        const char* adsrNames[] = { "A", "D", "S", "R" };
-
-        for (int j = 0; j < 4; ++j)
+        adsrEditors[i]->onAdsrChanged = [this, i](double a, double d, double s, double r)
         {
-            adsrLabels[adsrBaseIndex + j].setText(adsrNames[j], juce::dontSendNotification);
-            adsrLabels[adsrBaseIndex + j].setJustificationType(juce::Justification::centred);
-            adsrLabels[adsrBaseIndex + j].setColour(juce::Label::textColourId, juce::Colours::whitesmoke);
-            addAndMakeVisible(adsrLabels[adsrBaseIndex + j]);
-        }
-
-        releaseSliders[i].onValueChange = [this, i]() {
-            audioProcessor.setAdsrRelease(i, releaseSliders[i].getValue());
+            audioProcessor.setAdsrAttack(i, a);
+            audioProcessor.setAdsrDecay(i, d);
+            audioProcessor.setAdsrSustain(i, s);
+            audioProcessor.setAdsrRelease(i, r);
         };
+
 
 
 
@@ -335,7 +307,7 @@ void SampleAudioProcessorEditor::resized()
 
     int knobSize = 60;
     int spacing = 5;
-    int stepSeqHeight = 200;
+    int stepSeqHeight = 300;
     int rightColumnWidth = 120;
 
 
@@ -346,9 +318,14 @@ void SampleAudioProcessorEditor::resized()
     auto stepSequencerArea = topArea;
 
     stepSequencerGroup.setBounds(stepSequencerArea);
-    globalBpmLabel.setBounds(bpmArea.removeFromTop(20).withTrimmedLeft(10));
-    globalBpmSlider.setBounds(bpmArea.withTrimmedLeft(10).withSizeKeepingCentre(60, 100));
+    auto bpmLabelHeight = 25;
+    auto bpmSliderHeight = 250;
 
+    globalBpmLabel.setBounds(bpmArea.removeFromTop(bpmLabelHeight).reduced(5));
+
+    globalBpmSlider.setBounds(
+        bpmArea.withSizeKeepingCentre(60, bpmSliderHeight)
+    );
 
     auto sequencerContentBounds = stepSequencerGroup.getBounds().reduced(10);    auto labelsArea = sequencerContentBounds.removeFromTop(20);
 
@@ -433,19 +410,8 @@ void SampleAudioProcessorEditor::resized()
         auto adsrArea = contentArea;
         int adsrBaseIndex = i * 4;
 
-        for (int j = 0; j < 4; ++j)
-        {
-            auto slot = adsrArea.removeFromLeft(knobSize);
-            adsrLabels[adsrBaseIndex + j].setBounds(slot.removeFromTop(20));
-            switch (j)
-            {
-            case 0: attackSliders[i].setBounds(slot); break;
-            case 1: decaySliders[i].setBounds(slot); break;
-            case 2: sustainSliders[i].setBounds(slot); break;
-            case 3: releaseSliders[i].setBounds(slot); break;
-            }
-            adsrArea.removeFromLeft(spacing);
-        }
+        adsrEditors[i]->setBounds(adsrArea);
+
 
     }
 }
@@ -504,4 +470,122 @@ void SampleAudioProcessorEditor::setupToggleButton(juce::TextButton& button, con
     button.setButtonText(text);
     button.setClickingTogglesState(true);
     addAndMakeVisible(button);
+}
+
+ADSREditorComponent::ADSREditorComponent()
+{
+    setMouseCursor(juce::MouseCursor::PointingHandCursor);
+}
+
+void ADSREditorComponent::setAdsr(double a, double d, double s, double r)
+{
+    attack = a;
+    decay = d;
+    sustain = s;
+    release = r;
+    repaint();
+}
+
+void ADSREditorComponent::paint(juce::Graphics& g)
+{
+    auto area = getLocalBounds().toFloat().reduced(10.0f);
+    g.setColour(juce::Colours::darkslategrey);
+    g.fillRect(area);
+
+    float totalTime = attack + decay + release + 0.001f;
+
+    float attackX = area.getX();
+    float attackY = area.getBottom();
+    float decayX = attackX + (attack / totalTime) * area.getWidth();
+    float decayY = area.getY();
+    float sustainX = decayX + (decay / totalTime) * area.getWidth();
+    float sustainY = area.getY() + (1.0f - sustain) * area.getHeight();
+    float releaseX = sustainX + (release / totalTime) * area.getWidth();
+    float releaseY = area.getBottom();
+
+    juce::Path adsrPath;
+    adsrPath.startNewSubPath(attackX, attackY);
+    adsrPath.lineTo(decayX, decayY);
+    adsrPath.lineTo(sustainX, sustainY);
+    adsrPath.lineTo(releaseX, releaseY);
+
+    g.setColour(juce::Colours::deepskyblue);
+    g.strokePath(adsrPath, juce::PathStrokeType(2.0f));
+
+    drawHandle(g, decayX, decayY);       // Attack end
+    drawHandle(g, sustainX, sustainY);   // Sustain level
+    drawHandle(g, releaseX, releaseY);   // Release end
+}
+
+void ADSREditorComponent::mouseDown(const juce::MouseEvent& e)
+{
+    auto area = getLocalBounds().toFloat().reduced(10.0f);
+    float totalTime = attack + decay + release + 0.001f;
+
+    float attackX = area.getX();
+    float decayX = attackX + (attack / totalTime) * area.getWidth();
+    float decayY = area.getY();
+
+    float sustainX = decayX + (decay / totalTime) * area.getWidth();
+    float sustainY = area.getY() + (1.0f - sustain) * area.getHeight();
+
+    float releaseX = sustainX + (release / totalTime) * area.getWidth();
+    float releaseY = area.getBottom();
+
+    juce::Point<float> click = e.position;
+
+    auto isNear = [](juce::Point<float> p1, juce::Point<float> p2, float threshold = 10.0f)
+    {
+        return p1.getDistanceFrom(p2) <= threshold;
+    };
+
+    draggingAttack  = isNear(click, { decayX, decayY });
+    draggingDecay   = !draggingAttack && isNear(click, { sustainX, sustainY });
+    draggingSustain = draggingDecay;
+    draggingRelease = !draggingAttack && !draggingDecay && isNear(click, { releaseX, releaseY });
+}
+
+
+void ADSREditorComponent::mouseDrag(const juce::MouseEvent& e)
+{
+    auto area = getLocalBounds().toFloat().reduced(10.0f);
+    float width = area.getWidth();
+    float height = area.getHeight();
+
+    float totalTime = attack + decay + release + 0.001f;
+
+    float relX = (e.position.x - area.getX()) / width;
+    float relY = 1.0f - ((e.position.y - area.getY()) / height);
+
+    relX = juce::jlimit(0.0f, 1.0f, relX);
+    relY = juce::jlimit(0.0f, 1.0f, relY);
+
+    float newTime = relX * totalTime;
+
+    if (draggingAttack)
+    {
+        attack = juce::jlimit(0.01f, static_cast<float>(totalTime - decay - release), static_cast<float>(newTime));
+
+    }
+    else if (draggingDecay)
+    {
+        decay = juce::jlimit(0.01, totalTime - attack - release, newTime - attack);
+        sustain = juce::jlimit(0.0f, 1.0f, relY);
+    }
+    else if (draggingRelease)
+    {
+        release = juce::jlimit(0.01, totalTime - attack - decay, newTime - attack - decay);
+    }
+
+    if (onAdsrChanged)
+        onAdsrChanged(attack, decay, sustain, release);
+
+    repaint();
+}
+
+
+void ADSREditorComponent::drawHandle(juce::Graphics& g, float x, float y)
+{
+    g.setColour(juce::Colours::white);
+    g.fillEllipse(x - 4.0f, y - 4.0f, 8.0f, 8.0f);
 }

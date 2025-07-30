@@ -317,15 +317,20 @@ void SampleAudioProcessor::processBlock(juce::AudioBuffer<float>& buffer, juce::
     int samplesPerStep = globalSamplesPerBeat / 4;
     sampleCounterForStep += bufferNumSamples;
 
-    if (sampleCounterForStep >= samplesPerStep)
+    sampleCounterForStep += bufferNumSamples;
+
+    while (sampleCounterForStep >= samplesPerStep)
     {
         sampleCounterForStep -= samplesPerStep;
         currentStep = (currentStep + 1) % NUM_STEPS;
 
         for (int i = 0; i < NUM_SAMPLES; ++i)
-            sampleReadPositions[i] = 0;
-
+        {
+            if (stepStates[i][currentStep])
+                sampleReadPositions[i] = 0;
+        }
     }
+
 }
 
 
