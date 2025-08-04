@@ -1,7 +1,11 @@
 #include "PluginProcessor.h"
 #include "PluginEditor.h"
 
-//==============================================================================
+
+/**
+ * @brief Constructor. Initializes the AudioProcessor and registers audio formats.
+ */
+
 SampleAudioProcessor::SampleAudioProcessor()
 #ifndef JucePlugin_PreferredChannelConfigurations
      : AudioProcessor (BusesProperties()
@@ -14,14 +18,17 @@ SampleAudioProcessor::SampleAudioProcessor()
                        )
 #endif
 {
-    formatManager.registerBasicFormats(); //  .wav, .aiff, .mp3 etc.
+    formatManager.registerBasicFormats(); ///< Registers support for WAV, AIFF, MP3, etc.
 }
 
+/**
+ * @brief Destructor. Cleans up any resources used by the processor.
+ */
 SampleAudioProcessor::~SampleAudioProcessor()
 {
 }
 
-//==============================================================================
+
 const juce::String SampleAudioProcessor::getName() const
 {
     return JucePlugin_Name;
@@ -61,8 +68,7 @@ double SampleAudioProcessor::getTailLengthSeconds() const
 
 int SampleAudioProcessor::getNumPrograms()
 {
-    return 1;   // NB: some hosts don't cope very well if you tell them there are 0 programs,
-                // so this should be at least 1, even if you're not really implementing programs.
+    return 1;
 }
 
 int SampleAudioProcessor::getCurrentProgram()
@@ -83,7 +89,12 @@ void SampleAudioProcessor::changeProgramName (int index, const juce::String& new
 {
 }
 
-//==============================================================================
+
+/**
+ * @brief Called before playback starts. Initializes filters, ADSR envelopes, and internal counters.
+ * @param sampleRate The current sample rate.
+ * @param samplesPerBlock The expected block size.
+ */
 void SampleAudioProcessor::prepareToPlay(double sampleRate, int samplesPerBlock)
 {
     if (sampleRate > 0.0)
@@ -171,11 +182,9 @@ void SampleAudioProcessor::prepareToPlay(double sampleRate, int samplesPerBlock)
 
 
 
-
 void SampleAudioProcessor::releaseResources()
 {
-    // When playback stops, you can use this as an opportunity to free up any
-    // spare memory, etc.
+
 }
 
 #ifndef JucePlugin_PreferredChannelConfigurations
@@ -204,6 +213,13 @@ bool SampleAudioProcessor::isBusesLayoutSupported (const BusesLayout& layouts) c
 }
 #endif
 
+
+/**
+ * @brief Main audio processing callback.
+ * Applies filters, bitcrusher, ADSR envelope, and gain to each active sample, and mixes them into the output buffer.
+ * @param buffer The audio buffer to fill.
+ * @param midiMessages Incoming MIDI messages (unused).
+ */
 void SampleAudioProcessor::processBlock(juce::AudioBuffer<float>& buffer, juce::MidiBuffer&)
 {
     juce::ScopedNoDenormals noDenormals;
@@ -359,13 +375,20 @@ void SampleAudioProcessor::setStateInformation (const void* data, int sizeInByte
     // whose contents will have been created by the getStateInformation() call.
 }
 
-//==============================================================================
-// This creates new instances of the plugin..
+
+
+/* @brief creates new instances of the plugin..  */
 juce::AudioProcessor* JUCE_CALLTYPE createPluginFilter()
 {
     return new SampleAudioProcessor();
 }
 
+
+/**
+ * @brief Loads a sample from file into the specified slot.
+ * @param file The audio file to load.
+ * @param index The sample index (0 to NUM_SAMPLES - 1).
+ */
 void SampleAudioProcessor::loadSampleFile(const juce::File& file, int index)
 {
     if (index < 0 || index >= NUM_SAMPLES)
@@ -389,8 +412,10 @@ void SampleAudioProcessor::loadSampleFile(const juce::File& file, int index)
 
 
 
-
-
+/**
+ * @brief Sets the global BPM (beats per minute) and updates timing variables.
+ * @param newBpm The new BPM value.
+ */
 void SampleAudioProcessor::setGlobalBpm(float newBpm)
 {
     globalBpm = newBpm;
@@ -398,6 +423,12 @@ void SampleAudioProcessor::setGlobalBpm(float newBpm)
         globalSamplesPerBeat = static_cast<int>((60.0 / globalBpm) * getSampleRate());
 }
 
+
+/**
+ * @brief Enables or disables the low-pass filter for a given sample.
+ * @param index Index of the sample.
+ * @param enabled True to enable, false to disable.
+ */
 void SampleAudioProcessor::setFilterEnabled(int index, bool enabled)
 {
     if (index >= 0 && index < NUM_SAMPLES)
@@ -409,6 +440,12 @@ void SampleAudioProcessor::setFilterEnabled(int index, bool enabled)
     }
 }
 
+
+/**
+ * @brief Sets the cutoff frequency of the low-pass filter.
+ * @param index Index of the sample.
+ * @param cutoffHz Cutoff frequency in Hz.
+ */
 void SampleAudioProcessor::setFilterCutoff(int index, float cutoffHz)
 {
     if (index >= 0 && index < NUM_SAMPLES)
@@ -420,11 +457,23 @@ void SampleAudioProcessor::setFilterCutoff(int index, float cutoffHz)
     }
 }
 
+
+/**
+ * @brief Checks if the high-pass filter is enabled for the given sample.
+ * @param index Index of the sample.
+ * @return True if enabled.
+ */
 bool SampleAudioProcessor::getHighpassEnabled(int index) const
 {
     return isHighPassEnabled[index];
 }
 
+
+/**
+ * @brief Enables or disables the high-pass filter for a given sample.
+ * @param index Index of the sample.
+ * @param enabled True to enable, false to disable.
+ */
 void SampleAudioProcessor::setHighpassEnabled(int index, bool enabled)
 {
     if (index >= 0 && index < NUM_SAMPLES)
@@ -436,22 +485,45 @@ void SampleAudioProcessor::setHighpassEnabled(int index, bool enabled)
     }
 }
 
+/**
+ * @brief Gets the high-pass filter cutoff frequency.
+ * @param index Index of the sample.
+ * @return Cutoff frequency in Hz.
+ */
 float SampleAudioProcessor::getHighpassCutoff(int index) const
 {
     return highPassCutoffFrequencies[index];
 }
 
+
+/**
+ * @brief Sets the cutoff frequency for the high-pass filter.
+ * @param index Index of the sample.
+ * @param cutoff Cutoff frequency in Hz.
+ */
 void SampleAudioProcessor::setHighpassCutoff(int index, float cutoff)
 {
     highPassCutoffFrequencies[index] = cutoff;
     sampleHighPassFilters[index].setCutoffFrequency(cutoff);
 }
 
+/**
+ * @brief Checks if the band-pass filter is enabled for the given sample.
+ * @param index Index of the sample.
+ * @return True if enabled.
+ */
 bool SampleAudioProcessor::getBandPassEnabled(int index) const
 {
     return isBandPassEnabled[index];
 }
 
+
+/**
+ * @brief Enables or disables the band-pass filter.
+ * Disables other filters when activated.
+ * @param index Index of the sample.
+ * @param enabled True to enable, false to disable.
+ */
 void SampleAudioProcessor::setBandPassEnabled(int index, bool enabled)
 {
     isBandPassEnabled[index] = enabled;
@@ -464,29 +536,64 @@ void SampleAudioProcessor::setBandPassEnabled(int index, bool enabled)
     }
 }
 
+/**
+ * @brief Sets the band-pass filter cutoff frequency.
+ * @param index Index of the sample.
+ * @param value Cutoff frequency in Hz.
+ */
 void SampleAudioProcessor::setBandPassCutoff(int index, float value) {
     if (index >= 0 && index < NUM_SAMPLES)
         bandPassCutoffs[index] = value;
 }
 
+
+/**
+ * @brief Gets the band-pass filter cutoff frequency.
+ * @param index Index of the sample.
+ * @return Cutoff frequency in Hz.
+ */
 float SampleAudioProcessor::getBandPassCutoff(int index) const {
     return bandPassCutoffs[index];
 }
 
+
+/**
+ * @brief Sets the bandwidth (Q) of the band-pass filter.
+ * @param index Index of the sample.
+ * @param value Bandwidth value.
+ */
 void SampleAudioProcessor::setBandPassBandwidth(int index, float value) {
     if (index >= 0 && index < NUM_SAMPLES)
         bandPassBandwidths[index] = value;
 }
 
+/**
+ * @brief Gets the bandwidth of the band-pass filter.
+ * @param index Index of the sample.
+ * @return Bandwidth value.
+ */
 float SampleAudioProcessor::getBandPassBandwidth(int index) const {
     return bandPassBandwidths[index];
 }
 
+
+/**
+ * @brief Checks if the notch filter is enabled.
+ * @param index Index of the sample.
+ * @return True if enabled.
+ */
 bool SampleAudioProcessor::getNotchEnabled(int index) const
 {
     return isNotchEnabled[index];
 }
 
+
+/**
+ * @brief Enables or disables the notch filter for the given sample.
+ * Disables all other filters when enabled.
+ * @param index Index of the sample.
+ * @param enabled True to enable, false to disable.
+ */
 void SampleAudioProcessor::setNotchEnabled(int index, bool enabled)
 {
     isNotchEnabled[index] = enabled;
@@ -499,6 +606,12 @@ void SampleAudioProcessor::setNotchEnabled(int index, bool enabled)
     }
 }
 
+
+/**
+ * @brief Sets the notch filter cutoff frequency and updates its coefficients.
+ * @param index Index of the sample.
+ * @param value Cutoff frequency in Hz.
+ */
 void SampleAudioProcessor::setNotchCutoff(int index, float value)
 {
     if (index >= 0 && index < NUM_SAMPLES)
@@ -508,7 +621,11 @@ void SampleAudioProcessor::setNotchCutoff(int index, float value)
     }
 }
 
-
+/**
+ * @brief Sets the bandwidth of the notch filter and updates its coefficients.
+ * @param index Index of the sample.
+ * @param value Bandwidth value.
+ */
 void SampleAudioProcessor::setNotchBandwidth(int index, float value)
 {
     if (index >= 0 && index < NUM_SAMPLES)
@@ -518,7 +635,10 @@ void SampleAudioProcessor::setNotchBandwidth(int index, float value)
     }
 }
 
-
+/**
+ * @brief Recalculates and applies the notch filter coefficients.
+ * @param index Index of the sample.
+ */
 void SampleAudioProcessor::updateNotchCoefficients(int index)
 {
     if (index < 0 || index >= NUM_SAMPLES) return;
@@ -531,11 +651,22 @@ void SampleAudioProcessor::updateNotchCoefficients(int index)
     *sampleNotchFilters[index].coefficients = *coeffs;
 }
 
+/**
+ * @brief Checks if the peak (bell) filter is enabled.
+ * @param index Index of the sample.
+ * @return True if enabled.
+ */
 bool SampleAudioProcessor::getPeakEnabled(int index) const
 {
     return isPeakEnabled[index];
 }
 
+/**
+ * @brief Enables or disables the peak filter.
+ * Disables the band-pass filter if enabled.
+ * @param index Index of the sample.
+ * @param enabled True to enable, false to disable.
+ */
 void SampleAudioProcessor::setPeakEnabled(int index, bool enabled)
 {
     isPeakEnabled[index] = enabled;
@@ -546,51 +677,96 @@ void SampleAudioProcessor::setPeakEnabled(int index, bool enabled)
     }
 }
 
+/**
+ * @brief Sets the cutoff frequency for the peak filter.
+ * @param index Index of the sample.
+ * @param value Cutoff frequency in Hz.
+ */
 void SampleAudioProcessor::setPeakCutoff(int index, float value)
 {
     if (index >= 0 && index < NUM_SAMPLES)
         peakCutoffs[index] = value;
 }
 
+/**
+ * @brief Sets the gain (in dB) for the peak filter.
+ * @param index Index of the sample.
+ * @param value Gain in decibels.
+ */
 void SampleAudioProcessor::setPeakGain(int index, float value)
 {
     if (index >= 0 && index < NUM_SAMPLES)
         peakGains[index] = value;
 }
 
+/**
+ * @brief Sets the Q (bandwidth) for the peak filter.
+ * @param index Index of the sample.
+ * @param value Q factor.
+ */
 void SampleAudioProcessor::setPeakQ(int index, float value)
 {
     if (index >= 0 && index < NUM_SAMPLES)
         peakQs[index] = value;
 }
 
-
+/**
+ * @brief Enables or disables the bitcrusher effect.
+ * @param index Index of the sample.
+ * @param enabled True to enable, false to disable.
+ */
 void SampleAudioProcessor::setBitcrusherEnabled(int index, bool enabled)
 {
     isBitcrusherEnabled[index] = enabled;
 }
 
+/**
+ * @brief Sets the bit depth for the bitcrusher effect.
+ * @param index Index of the sample.
+ * @param depth Number of bits (1–24).
+ */
 void SampleAudioProcessor::setBitDepth(int index, int depth)
 {
     bitDepths[index] = depth;
 }
 
+/**
+ * @brief Sets the downsampling rate for the bitcrusher effect.
+ * @param index Index of the sample.
+ * @param rate Downsampling factor.
+ */
 void SampleAudioProcessor::setDownsampleRate(int index, float rate)
 {
     downsampleRates[index] = rate;
 }
 
+/**
+ * @brief Sets the output gain level for the sample.
+ * @param index Index of the sample.
+ * @param gain Linear gain multiplier.
+ */
 void SampleAudioProcessor::setGainLevel(int index, float gain)
 {
     if (index >= 0 && index < NUM_SAMPLES)
         gainLevels[index] = gain;
 }
 
+/**
+ * @brief Gets the gain level for the sample.
+ * @param index Index of the sample.
+ * @return Gain multiplier.
+ */
 float SampleAudioProcessor::getGainLevel(int index) const
 {
     return (index >= 0 && index < NUM_SAMPLES) ? gainLevels[index] : 1.0f;
 }
 
+
+/**
+ * @brief Sets the attack time for the ADSR envelope.
+ * @param index Index of the sample.
+ * @param value Attack time in seconds.
+ */
 void SampleAudioProcessor::setAdsrAttack(int index, float value)
 {
     if (index >= 0 && index < NUM_SAMPLES)
@@ -600,6 +776,11 @@ void SampleAudioProcessor::setAdsrAttack(int index, float value)
     }
 }
 
+/**
+ * @brief Sets the decay time for the ADSR envelope.
+ * @param index Index of the sample.
+ * @param value Decay time in seconds.
+ */
 void SampleAudioProcessor::setAdsrDecay(int index, float value)
 {
     if (index >= 0 && index < NUM_SAMPLES)
@@ -609,6 +790,11 @@ void SampleAudioProcessor::setAdsrDecay(int index, float value)
     }
 }
 
+/**
+ * @brief Sets the sustain level for the ADSR envelope.
+ * @param index Index of the sample.
+ * @param value Sustain level (0–1).
+ */
 void SampleAudioProcessor::setAdsrSustain(int index, float value)
 {
     if (index >= 0 && index < NUM_SAMPLES)
@@ -618,6 +804,12 @@ void SampleAudioProcessor::setAdsrSustain(int index, float value)
     }
 }
 
+
+/**
+ * @brief Sets the release time for the ADSR envelope.
+ * @param index Index of the sample.
+ * @param value Release time in seconds.
+ */
 void SampleAudioProcessor::setAdsrRelease(int index, float value)
 {
     if (index >= 0 && index < NUM_SAMPLES)
@@ -627,30 +819,43 @@ void SampleAudioProcessor::setAdsrRelease(int index, float value)
     }
 }
 
+/**
+ * @brief Gets the current attack value of the ADSR envelope.
+ * @param index Index of the sample.
+ * @return Attack time in seconds.
+ */
 float SampleAudioProcessor::getAdsrAttack(int index) const
 {
     return (index >= 0 && index < NUM_SAMPLES) ? adsrParams[index].attack : 0.0f;
 }
 
+/**
+ * @brief Gets the current decay value of the ADSR envelope.
+ * @param index Index of the sample.
+ * @return Decay time in seconds.
+ */
 float SampleAudioProcessor::getAdsrDecay(int index) const
 {
     return (index >= 0 && index < NUM_SAMPLES) ? adsrParams[index].decay : 0.0f;
 }
 
+/**
+ * @brief Gets the current sustain level of the ADSR envelope.
+ * @param index Index of the sample.
+ * @return Sustain level (0–1).
+ */
 float SampleAudioProcessor::getAdsrSustain(int index) const
 {
     return (index >= 0 && index < NUM_SAMPLES) ? adsrParams[index].sustain : 0.0f;
 }
 
+
+/**
+ * @brief Gets the current release time of the ADSR envelope.
+ * @param index Index of the sample.
+ * @return Release time in seconds.
+ */
 float SampleAudioProcessor::getAdsrRelease(int index) const
 {
     return (index >= 0 && index < NUM_SAMPLES) ? adsrParams[index].release : 0.0f;
 }
-
-
-
-
-
-
-
-
