@@ -42,7 +42,7 @@ SampleAudioProcessorEditor::SampleAudioProcessorEditor (SampleAudioProcessor& p)
         /**
          * @brief Load button to choose a sample file.
          */
-        loadSampleButtons[i].setButtonText("Load" + juce::String(i + 1));
+        loadSampleButtons[i].setButtonText("Load");
         loadSampleButtons[i].onClick = [this, i]()
         {
             fileChooser = std::make_unique<juce::FileChooser>("Select a Sample", juce::File{}, "*.wav");
@@ -115,6 +115,12 @@ SampleAudioProcessorEditor::SampleAudioProcessorEditor (SampleAudioProcessor& p)
         setupToggleButton(bandpassToggleButtons[i], "BPF");
         configureAsKnob(bandpassCutoffSliders[i], "Hz");
         configureAsKnob(bandpassBandwidthSliders[i], "Hz");
+        bandpassCutoffSliders[i].setRange(20.0, 10000.0, 1.0);
+        bandpassCutoffSliders[i].setValue(1000.0);
+
+        bandpassBandwidthSliders[i].setRange(10.0, 5000.0, 1.0);
+        bandpassBandwidthSliders[i].setValue(500.0);
+
         addAndMakeVisible(bandpassCutoffSliders[i]);
         addAndMakeVisible(bandpassBandwidthSliders[i]);
         bandpassCutoffSliders[i].onValueChange = [this, i]() {
